@@ -1,0 +1,43 @@
+name: NASDAQ-Momentum-Scanner
+
+on:
+  schedule:
+    # 2pm-8pm ET (EDT = UTC-4) → 18:00-00:00 UTC, lunes a viernes
+    - cron: "0 18 * * 1-5"
+    - cron: "0 19 * * 1-5"
+    - cron: "0 20 * * 1-5"
+    - cron: "0 21 * * 1-5"
+    - cron: "0 22 * * 1-5"
+    - cron: "0 23 * * 1-5"
+    - cron: "0 0 * * 2-6"   # 8pm ET = medianoche UTC (martes-sábado UTC)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar scan de momentum
+        env:
+          APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
+          APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
+        working-directory: Momentum
+        run: python -c "from momentum_bot import run_scan; run_scan()"
+
+      - name: Guardar stop levels
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Momentum/stop_levels.json
+          git diff --cached --quiet || git commit -m "chore: update stop_levels [skip ci]"
+          git push

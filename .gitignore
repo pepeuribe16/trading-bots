@@ -1,0 +1,18 @@
+# Configs con credenciales — NUNCA subir
+alpaca_config.json
+Momentum/config.json
+CapitolTrades/config.json
+.env
+
+# Datos de runtime que no necesitan tracking
+CapitolTrades/seen_trades.json
+CapitolTrades/house_trades_raw.json
+CapitolTrades/uw_openapi.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Build / deploy output
+public/
