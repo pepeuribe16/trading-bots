@@ -20,8 +20,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Ejecutar dashboard
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python market_losers_dashboard.py
 
       - name: Deploy a Firebase Hosting
