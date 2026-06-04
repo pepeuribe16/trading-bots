@@ -34,12 +34,33 @@ jobs:
           APCA_SECRET: ${{ secrets.APCA_MOMENTUM_SECRET }}
         run: |
           python -c "
-          import json, os
-          cfg = json.load(open('config.json'))
-          cfg['alpaca']['api_key'] = os.environ['APCA_KEY']
-          cfg['alpaca']['api_secret'] = os.environ['APCA_SECRET']
-          json.dump(cfg, open('config.json','w'), indent=2)
-          "
+import json, os
+cfg = {
+  'alpaca': {
+    'endpoint': 'https://paper-api.alpaca.markets/v2',
+    'api_key': os.environ['APCA_KEY'].strip(),
+    'api_secret': os.environ['APCA_SECRET'].strip()
+  },
+  'strategy': {
+    'name': 'NASDAQ 100 Momentum Breakout',
+    'trade_size_usd': 2000,
+    'max_positions': 10,
+    'stop_loss_pct': 5.0,
+    'breakout_lookback_days': 20,
+    'volume_multiplier': 1.5,
+    'exit_ma_days': 10
+  },
+  'universe': [
+    'AAPL','MSFT','NVDA','AMZN','META','GOOGL','TSLA','AVGO','COST','NFLX',
+    'AMD','ADBE','QCOM','CSCO','INTU','TXN','AMGN','ISRG','VRTX','REGN',
+    'LRCX','MU','SNPS','CDNS','KLAC','PANW','CRWD','MELI','ORLY','MNST',
+    'FTNT','CTAS','FAST','IDXX','DXCM','NXPI','PCAR','CPRT','ODFL','ZS',
+    'DDOG','SNOW','COIN','RBLX','HOOD','AFRM','TEAM','ABNB','WDAY','OKTA'
+  ]
+}
+json.dump(cfg, open('config.json','w'), indent=2)
+print('config.json creado')
+"
 
       - name: Ejecutar scan de momentum
         working-directory: Momentum

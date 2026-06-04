@@ -11,8 +11,8 @@ from datetime import datetime
 SYMBOL = "TSLA"
 BASE = "https://paper-api.alpaca.markets/v2"
 HEADS = {
-    "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"],
-    "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"],
+    "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"].strip("﻿").strip(),
+    "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"].strip("﻿").strip(),
 }
 TRAIL_PERCENT = 5.0
 LADDERS = [(10.0, 5), (20.0, 15), (35.0, 25)]

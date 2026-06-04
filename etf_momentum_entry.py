@@ -15,8 +15,8 @@ STATE_FILE = "etf_state.json"
 
 BASE = "https://paper-api.alpaca.markets/v2"
 HEADS = {
-    "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"],
-    "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"],
+    "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"].strip("﻿").strip(),
+    "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"].strip("﻿").strip(),
 }
 
 
@@ -30,8 +30,9 @@ def get_1month_return(ticker):
     data = yf.download(ticker, start=start, end=end, progress=False)
     if len(data) < 2:
         return None
-    first = float(data["Close"].iloc[0])
-    last = float(data["Close"].iloc[-1])
+    close = data["Close"].squeeze()  # handle multi-level columns in newer yfinance
+    first = float(close.iloc[0])
+    last = float(close.iloc[-1])
     return (last - first) / first * 100 if first > 0 else None
 
 
