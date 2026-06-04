@@ -16,9 +16,9 @@ HEADS = {
     "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"].encode("ascii", "ignore").decode("ascii").strip(),
     "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"].encode("ascii", "ignore").decode("ascii").strip(),
 }
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "pepeuribe16@gmail.com")
-EMAIL_TO = os.environ.get("EMAIL_TO", "pepeuribe16@gmail.com")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "pepeuribe16@gmail.com").encode("ascii", "ignore").decode("ascii").strip()
+EMAIL_TO = os.environ.get("EMAIL_TO", "pepeuribe16@gmail.com").encode("ascii", "ignore").decode("ascii").strip()
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "").encode("ascii", "ignore").decode("ascii").strip()
 DRAWDOWN_LIMIT = 0.08
 
 
