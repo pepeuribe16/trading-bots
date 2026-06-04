@@ -13,8 +13,8 @@ from datetime import datetime
 
 BASE = "https://paper-api.alpaca.markets/v2"
 HEADS = {
-    "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"].strip("﻿").strip(),
-    "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"].strip("﻿").strip(),
+    "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"].encode("ascii", "ignore").decode("ascii").strip(),
+    "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"].encode("ascii", "ignore").decode("ascii").strip(),
 }
 EMAIL_FROM = os.environ.get("EMAIL_FROM", "pepeuribe16@gmail.com")
 EMAIL_TO = os.environ.get("EMAIL_TO", "pepeuribe16@gmail.com")

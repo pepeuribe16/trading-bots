@@ -23,9 +23,9 @@ jobs:
         run: python market_losers_dashboard.py
 
       - name: Deploy a Firebase Hosting
+        continue-on-error: true
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           npm install -g firebase-tools --silent
-          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --project "$FIREBASE_PROJECT" --non-interactive
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --site market-dashboard-gga --non-interactive
