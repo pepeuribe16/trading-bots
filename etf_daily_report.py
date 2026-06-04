@@ -114,7 +114,7 @@ def send_email(subject, html):
     msg["Subject"] = subject
     msg["From"] = EMAIL_FROM
     msg["To"] = EMAIL_TO
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(EMAIL_FROM, EMAIL_PASSWORD)
         smtp.send_message(msg)
