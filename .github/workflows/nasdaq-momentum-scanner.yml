@@ -27,10 +27,21 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
-      - name: Ejecutar scan de momentum
+      - name: Crear config.json para momentum_bot
+        working-directory: Momentum
         env:
-          APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
-          APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
+          APCA_KEY: ${{ secrets.APCA_MOMENTUM_KEY_ID }}
+          APCA_SECRET: ${{ secrets.APCA_MOMENTUM_SECRET }}
+        run: |
+          python -c "
+          import json, os
+          cfg = json.load(open('config.json'))
+          cfg['alpaca']['api_key'] = os.environ['APCA_KEY']
+          cfg['alpaca']['api_secret'] = os.environ['APCA_SECRET']
+          json.dump(cfg, open('config.json','w'), indent=2)
+          "
+
+      - name: Ejecutar scan de momentum
         working-directory: Momentum
         run: python -c "from momentum_bot import run_scan; run_scan()"
 
