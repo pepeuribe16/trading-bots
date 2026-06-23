@@ -1,0 +1,27 @@
+{
+  "alpaca": {
+    "endpoint": "https://paper-api.alpaca.markets/v2",
+    "api_key": "PKUMYVH2OGVO77HGJGX4H2JGNP",
+    "api_secret": "DquZDDmcEKGYDPyE8mjYJvLWByZAhpiQNrAsqUQvk15N",
+    "account": "PA3005WTJRYE"
+  },
+  "strategy": {
+    "name": "Chandelier Exit ATR Trailing Stop",
+    "atr_period": 14,
+    "atr_multiplier": 2.5,
+    "breakout_days": 20,
+    "ma_trend_days": 50,
+    "volume_multiplier": 1.5,
+    "risk_per_trade_pct": 2.0,
+    "max_position_pct": 20.0,
+    "max_positions": 8
+  },
+  "universe": [
+    "AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","AVGO","COST","NFLX",
+    "AMD","ADBE","QCOM","CSCO","INTU","TXN","AMGN","ISRG","VRTX","REGN",
+    "LRCX","MU","SNPS","CDNS","KLAC","PANW","CRWD","MELI","ORLY","MNST",
+    "FTNT","CTAS","FAST","IDXX","DXCM","NXPI","PCAR","CPRT","ODFL","ZS",
+    "DDOG","SNOW","COIN","TEAM","ABNB","WDAY","MRVL","MPWR","ON","ENPH",
+    "ARM","AXON","DASH","UBER","SMCI","CEG","GEHC","PINS","AEP","CHTR"
+  ]
+}
