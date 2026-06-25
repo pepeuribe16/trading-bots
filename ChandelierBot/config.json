@@ -1,8 +1,6 @@
 {
   "alpaca": {
     "endpoint": "https://paper-api.alpaca.markets/v2",
-    "api_key": "PKUMYVH2OGVO77HGJGX4H2JGNP",
-    "api_secret": "DquZDDmcEKGYDPyE8mjYJvLWByZAhpiQNrAsqUQvk15N",
     "account": "PA3005WTJRYE"
   },
   "strategy": {

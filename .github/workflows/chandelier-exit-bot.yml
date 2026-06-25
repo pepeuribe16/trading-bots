@@ -1,0 +1,37 @@
+name: chandelier-exit-bot
+
+on:
+  schedule:
+    # 9:35am hora México (CDT = UTC-6) → 15:35 UTC  — apertura
+    - cron: "35 15 * * 1-5"
+    # 3:45pm hora México (CDT = UTC-6) → 21:45 UTC  — antes del cierre
+    - cron: "45 21 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Ejecutar Chandelier Exit Bot
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+        run: python ChandelierBot/chandelier_bot.py
+
+      - name: Guardar chandelier_stops.json en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ChandelierBot/chandelier_stops.json
+          git diff --cached --quiet || git commit -m "chore: update chandelier stops [skip ci]"
+          git push

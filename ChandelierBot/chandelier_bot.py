@@ -6,33 +6,36 @@ Stop   : highest_close_since_entry - 2.5 * ATR(14)  [only moves up]
 Size   : risk 2% of portfolio per trade = $risk / stop_distance shares
 Exit   : price closes below chandelier stop
 """
+import os
 import requests
 import json
-import time
-from datetime import datetime, timezone
+from datetime import datetime
 
-# ── Config ────────────────────────────────────────────────────────────────────
-with open("config.json") as f:
+# ── Config ─────────────────────────────────────────────────────────────────────
+# Credentials come from GitHub Secrets (env vars); strategy/universe from config.json
+_HERE = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(_HERE, "config.json")) as f:
     cfg = json.load(f)
 
 BASE    = cfg["alpaca"]["endpoint"]
 DATA    = "https://data.alpaca.markets/v2"
 HEADS   = {
-    "APCA-API-KEY-ID":     cfg["alpaca"]["api_key"],
-    "APCA-API-SECRET-KEY": cfg["alpaca"]["api_secret"],
+    "APCA-API-KEY-ID":     os.environ["ALPACA_API_KEY"],
+    "APCA-API-SECRET-KEY": os.environ["ALPACA_API_SECRET"],
 }
 S            = cfg["strategy"]
 TICKERS      = cfg["universe"]
-ATR_PERIOD   = S["atr_period"]        # 14
-ATR_MULT     = S["atr_multiplier"]    # 2.5
-BKOUT_DAYS   = S["breakout_days"]     # 20
-MA_DAYS      = S["ma_trend_days"]     # 50
-VOL_MULT     = S["volume_multiplier"] # 1.5
-RISK_PCT     = S["risk_per_trade_pct"] / 100   # 0.02
-MAX_POS_PCT  = S["max_position_pct"] / 100     # 0.20
-MAX_POS      = S["max_positions"]              # 8
+ATR_PERIOD   = S["atr_period"]
+ATR_MULT     = S["atr_multiplier"]
+BKOUT_DAYS   = S["breakout_days"]
+MA_DAYS      = S["ma_trend_days"]
+VOL_MULT     = S["volume_multiplier"]
+RISK_PCT     = S["risk_per_trade_pct"] / 100
+MAX_POS_PCT  = S["max_position_pct"] / 100
+MAX_POS      = S["max_positions"]
 
-STOPS_FILE   = "chandelier_stops.json"
+STOPS_FILE   = os.path.join(_HERE, "chandelier_stops.json")
 BARS_NEEDED  = max(MA_DAYS, BKOUT_DAYS) + ATR_PERIOD + 5  # ~70 bars
 
 
@@ -281,15 +284,9 @@ def _print_summary(sells, buys):
     log(f"\nDone — Sells: {sells} | Buys: {buys}")
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# ── Entry point (single run for GitHub Actions) ────────────────────────────────
 if __name__ == "__main__":
-    log("Chandelier Exit Bot started")
+    log("Chandelier Exit Bot — single run")
     log(f"ATR({ATR_PERIOD}) × {ATR_MULT} | Risk {RISK_PCT*100:.0f}%/trade | "
         f"Max {MAX_POS} positions | {BKOUT_DAYS}d breakout + MA{MA_DAYS} filter")
-    while True:
-        try:
-            run_scan()
-        except Exception as e:
-            log(f"ERROR: {e}")
-        log("Sleeping 30 min...\n")
-        time.sleep(1800)
+    run_scan()
