@@ -206,10 +206,14 @@ def run():
         analyses.append(analyze(ticker, l["change_pct"]))
 
     html = generate_html(losers, analyses)
-    os.makedirs("public", exist_ok=True)
+    os.makedirs("public/historico", exist_ok=True)
     with open("public/index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    log("public/index.html generado — listo para Firebase deploy")
+    # Guarda copia fechada para el Historial
+    dated = f"public/historico/{datetime.now().strftime('%Y-%m-%d')}.html"
+    with open(dated, "w", encoding="utf-8") as f:
+        f.write(html)
+    log(f"public/index.html + {dated} generados — listos para Firebase deploy")
 
 
 if __name__ == "__main__":
