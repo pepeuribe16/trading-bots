@@ -1,7 +1,7 @@
 {
   "hosting": [
     {
-      "target": "market-dashboard",
+      "site": "market-dashboard-gga",
       "public": "public",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
