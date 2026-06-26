@@ -18,13 +18,13 @@ DATA       = "https://data.alpaca.markets/v2"
 HEADS      = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": API_SECRET}
 
 START_DATE   = date(2025, 1, 1)
-FETCH_FROM   = date(2024, 9, 1)   # necesitamos ~70 barras de warmup
+FETCH_FROM   = date(2024, 6, 1)   # necesitamos ~120 barras de warmup para breakout 55d
 END_DATE     = date.today()
 
 INITIAL_CAP  = 50_000.0
 ATR_PERIOD   = 14
 ATR_MULT     = 2.5
-BKOUT_DAYS   = 20
+BKOUT_DAYS   = 55
 MA_DAYS      = 50
 VOL_MULT     = 1.5
 RISK_PCT     = 0.02
@@ -393,7 +393,7 @@ def generate_html(equity_curve, trades, stats):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Backtest · Chandelier Exit 2025–2026</title>
+<title>Backtest · Chandelier Exit 55d 2025–2026</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
 :root{{--bg:#0A0C10;--surface:#111520;--surface2:#181D2B;--border:rgba(255,255,255,0.07);--text:#E8ECF4;--muted:#6B7A99;--green:#00E599;--red:#FF3B5C;--yellow:#FFB800;--blue:#4D8BFF}}
@@ -442,6 +442,9 @@ footer{{position:relative;z-index:10;text-align:center;padding:20px;font-family:
   <div class="eyebrow">📊 Simulación histórica</div>
   <h1>Backtest <span>Chandelier Exit</span></h1>
   <div class="subtitle">01 Ene 2025 → {END_DATE.strftime('%d %b %Y')} &nbsp;·&nbsp; Capital inicial $50,000 &nbsp;·&nbsp; NYSE / NASDAQ &nbsp;·&nbsp; {now_str}</div>
+  <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(0,229,153,0.08);border:1px solid rgba(0,229,153,0.25);border-radius:8px;padding:8px 16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:12px;color:#00E599;">
+    ⚡ Breakout actualizado: <b>55 días</b> (antes 20d) &nbsp;·&nbsp; Comparación: retorno anterior +11.1% / Sharpe 0.41 / Win Rate 46%
+  </div>
 
   <div class="disclaimer">
     ⚠️ <b>Solo fines educativos.</b> El backtest usa precios de cierre reales pero no incluye comisiones, slippage, ni impacto de mercado.
@@ -524,7 +527,7 @@ footer{{position:relative;z-index:10;text-align:center;padding:20px;font-family:
       <div style="color:var(--muted)">Período: <b style="color:var(--text)">01 Ene 2025 → {END_DATE.strftime('%d %b %Y')}</b></div>
       <div style="color:var(--muted)">Universo: <b style="color:var(--text)">60 tickers NASDAQ/NYSE</b></div>
       <div style="color:var(--muted)">ATR: <b style="color:var(--text)">período 14, multiplicador 2.5×</b></div>
-      <div style="color:var(--muted)">Breakout: <b style="color:var(--text)">máximo 20 días</b></div>
+      <div style="color:var(--muted)">Breakout: <b style="color:#00E599">máximo 55 días ⚡</b></div>
       <div style="color:var(--muted)">Filtro tendencia: <b style="color:var(--text)">MA 50 días</b></div>
       <div style="color:var(--muted)">Volumen: <b style="color:var(--text)">≥ 1.5× promedio 20d</b></div>
       <div style="color:var(--muted)">Riesgo/operación: <b style="color:var(--text)">2% del portafolio</b></div>

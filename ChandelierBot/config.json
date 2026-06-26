@@ -7,7 +7,7 @@
     "name": "Chandelier Exit ATR Trailing Stop",
     "atr_period": 14,
     "atr_multiplier": 2.5,
-    "breakout_days": 20,
+    "breakout_days": 55,
     "ma_trend_days": 50,
     "volume_multiplier": 1.5,
     "risk_per_trade_pct": 2.0,
