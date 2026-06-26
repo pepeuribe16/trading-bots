@@ -17,8 +17,8 @@ API_SECRET = os.environ["ALPACA_API_SECRET"]
 DATA       = "https://data.alpaca.markets/v2"
 HEADS      = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": API_SECRET}
 
-START_DATE   = date(2025, 1, 1)
-FETCH_FROM   = date(2024, 6, 1)   # necesitamos ~120 barras de warmup para breakout 55d
+START_DATE   = date(2025, 6, 26)
+FETCH_FROM   = date(2024, 12, 1)  # ~120 barras de warmup para breakout 55d
 END_DATE     = date.today()
 
 INITIAL_CAP  = 50_000.0
@@ -393,7 +393,7 @@ def generate_html(equity_curve, trades, stats):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Backtest · Chandelier Exit 55d 2025–2026</title>
+<title>Backtest · Chandelier Exit 55d · 1 año (Jun 2025–Jun 2026)</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
 :root{{--bg:#0A0C10;--surface:#111520;--surface2:#181D2B;--border:rgba(255,255,255,0.07);--text:#E8ECF4;--muted:#6B7A99;--green:#00E599;--red:#FF3B5C;--yellow:#FFB800;--blue:#4D8BFF}}
@@ -443,7 +443,7 @@ footer{{position:relative;z-index:10;text-align:center;padding:20px;font-family:
   <h1>Backtest <span>Chandelier Exit</span></h1>
   <div class="subtitle">01 Ene 2025 → {END_DATE.strftime('%d %b %Y')} &nbsp;·&nbsp; Capital inicial $50,000 &nbsp;·&nbsp; NYSE / NASDAQ &nbsp;·&nbsp; {now_str}</div>
   <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(0,229,153,0.08);border:1px solid rgba(0,229,153,0.25);border-radius:8px;padding:8px 16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:12px;color:#00E599;">
-    ⚡ Breakout actualizado: <b>55 días</b> (antes 20d) &nbsp;·&nbsp; Comparación: retorno anterior +11.1% / Sharpe 0.41 / Win Rate 46%
+    📅 Período: <b>26 Jun 2025 → 26 Jun 2026</b> &nbsp;·&nbsp; Capital inicial: $50,000 &nbsp;·&nbsp; Breakout: 55 días
   </div>
 
   <div class="disclaimer">
