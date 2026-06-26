@@ -31,4 +31,4 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           npm install -g firebase-tools --silent
-          firebase deploy --only hosting:market-dashboard-gga --token "$FIREBASE_TOKEN" --non-interactive
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --site market-dashboard-gga --non-interactive
