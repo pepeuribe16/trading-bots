@@ -14,5 +14,11 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Build / deploy output
-public/
+# Build / deploy output — solo excluir el root generado diariamente
+public/index.html
+# Subpáginas persistentes se trackean en el repo
+!public/
+!public/portfolio/
+!public/portfolio/index.html
+!public/backtest/
+!public/backtest/index.html

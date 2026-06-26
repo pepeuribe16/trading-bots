@@ -31,18 +31,10 @@ jobs:
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
         run: python ChandelierBot/chandelier_bot.py
 
-      - name: Guardar chandelier_stops.json en el repo
+      - name: Commitear stops y página de portafolio al repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f ChandelierBot/chandelier_stops.json
-          git diff --cached --quiet || git commit -m "chore: update chandelier stops [skip ci]"
+          git add -f ChandelierBot/chandelier_stops.json public/portfolio/index.html
+          git diff --cached --quiet || git commit -m "chore: update chandelier stops + portfolio page [skip ci]"
           git push
-
-      - name: Deploy portfolio page a Firebase Hosting
-        continue-on-error: true
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: |
-          npm install -g firebase-tools --silent
-          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --project market-dashboard-gga --non-interactive
