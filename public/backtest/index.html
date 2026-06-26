@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest · Chandelier Exit 2025–2026</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+:root{--bg:#0A0C10;--surface:#111520;--surface2:#181D2B;--border:rgba(255,255,255,0.07);--text:#E8ECF4;--muted:#6B7A99;--green:#00E599;--red:#FF3B5C;--yellow:#FFB800;--blue:#4D8BFF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(77,139,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(77,139,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:10px 24px}
+.nav-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.nav-links{display:flex;gap:8px}
+.nav-links a{text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.5px}
+.nav-links a.active{background:var(--green);color:#000}
+.nav-links a.inactive{background:rgba(255,255,255,0.07);color:var(--muted)}
+.wrap{position:relative;z-index:10;padding:72px 24px 60px;max-width:960px;margin:0 auto}
+.eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+h1{font-family:'DM Serif Display',serif;font-size:clamp(28px,5vw,42px);line-height:1.1;color:#fff;margin-bottom:4px}
+h1 span{color:var(--green);font-style:italic}
+.subtitle{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:28px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.metric-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.metric-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:#fff}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px}
+.card-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-label::before{content:'';width:14px;height:2px;background:var(--green);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:600;text-transform:uppercase;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04)}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:9px 10px;vertical-align:middle}
+.disclaimer{background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:12px;color:#a08040;line-height:1.6}
+footer{position:relative;z-index:10;text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:20px}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <span class="nav-label">Market Intelligence</span>
+  <div class="nav-links">
+    <a href="/" class="inactive">📉 Caídas</a>
+    <a href="/portfolio" class="inactive">🤖 Auto BOT</a>
+    <a href="/historico" class="inactive">📅 Historial</a>
+    <a href="/backtest" class="active">📊 Backtest</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="eyebrow">📊 Simulación histórica</div>
+  <h1>Backtest <span>Chandelier Exit</span></h1>
+  <div class="subtitle">01 Ene 2025 → 26 Jun 2026 &nbsp;·&nbsp; Capital inicial $50,000 &nbsp;·&nbsp; NYSE / NASDAQ &nbsp;·&nbsp; 26 Jun 2026 · 18:06 CT</div>
+
+  <div class="disclaimer">
+    ⚠️ <b>Solo fines educativos.</b> El backtest usa precios de cierre reales pero no incluye comisiones, slippage, ni impacto de mercado.
+    Los resultados pasados no garantizan resultados futuros.
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Capital Inicial</div>
+      <div class="metric-val">$50,000</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Capital Final</div>
+      <div class="metric-val" style="color:#00E599">$55,528</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Retorno Total</div>
+      <div class="metric-val" style="color:#00E599">+11.1%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Max Drawdown</div>
+      <div class="metric-val" style="color:#FF3B5C">-21.1%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Sharpe Ratio</div>
+      <div class="metric-val" style="color:#FFB800">0.41</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Operaciones</div>
+      <div class="metric-val">208</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-val" style="color:#FF3B5C">46%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg Ganancia</div>
+      <div class="metric-val" style="color:#00E599">+6.2%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg Pérdida</div>
+      <div class="metric-val" style="color:#FF3B5C">-4.4%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Mejor Trade</div>
+      <div class="metric-val" style="color:#00E599">+121.1%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Peor Trade</div>
+      <div class="metric-val" style="color:#FF3B5C">-31.4%</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Curva de Equity vs $50,000 base</div>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+  <defs>
+    <linearGradient id="eq_grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(0,229,153,0.18)"/>
+      <stop offset="100%" stop-color="rgba(0,229,153,0)"/>
+    </linearGradient>
+  </defs>
+  <rect width="620" height="220" fill="#111520" rx="8"/>
+  <text x="58" y="188" fill="#6B7A99" font-size="9" text-anchor="end">$42k</text><line x1="64" y1="184" x2="600" y2="184" stroke="#1E2535" stroke-width="1"/><text x="58" y="147.0" fill="#6B7A99" font-size="9" text-anchor="end">$47k</text><line x1="64" y1="143.0" x2="600" y2="143.0" stroke="#1E2535" stroke-width="1"/><text x="58" y="106.0" fill="#6B7A99" font-size="9" text-anchor="end">$52k</text><line x1="64" y1="102.0" x2="600" y2="102.0" stroke="#1E2535" stroke-width="1"/><text x="58" y="65.0" fill="#6B7A99" font-size="9" text-anchor="end">$56k</text><line x1="64" y1="61.0" x2="600" y2="61.0" stroke="#1E2535" stroke-width="1"/><text x="58" y="24.0" fill="#6B7A99" font-size="9" text-anchor="end">$61k</text><line x1="64" y1="20.0" x2="600" y2="20.0" stroke="#1E2535" stroke-width="1"/>
+  <text x="64.0" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Jan 25</text><text x="92.97297297297297" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Feb 25</text><text x="120.49729729729731" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Mar 25</text><text x="150.9189189189189" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Apr 25</text><text x="181.34054054054053" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">May 25</text><text x="211.76216216216218" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Jun 25</text><text x="240.73513513513515" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Jul 25</text><text x="272.6054054054054" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Aug 25</text><text x="303.02702702702703" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Sep 25</text><text x="333.44864864864866" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Oct 25</text><text x="366.7675675675676" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Nov 25</text><text x="394.2918918918919" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Dec 25</text><text x="426.16216216216213" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Jan 26</text><text x="455.1351351351351" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Feb 26</text><text x="482.65945945945947" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Mar 26</text><text x="514.5297297297298" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Apr 26</text><text x="544.9513513513514" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">May 26</text><text x="573.9243243243243" y="198" fill="#6B7A99" font-size="9" text-anchor="middle">Jun 26</text>
+  <line x1="64" y1="115.4" x2="600" y2="115.4" stroke="#334155" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="68" y="111.41226645832283" fill="#4A5568" font-size="8">$50k base</text>
+  <polygon points="64.0,115.4 65.4,115.4 66.9,115.4 68.3,115.5 69.8,112.5 71.2,114.0 72.7,120.4 74.1,116.8 75.6,113.9 77.0,107.7 78.5,104.5 79.9,97.6 81.4,84.7 82.8,88.2 84.3,94.3 85.7,126.5 87.2,123.9 88.6,127.9 90.1,125.9 91.5,119.3 93.0,118.1 94.4,114.5 95.9,119.7 97.3,118.3 98.8,124.4 100.2,121.2 101.7,126.4 103.1,130.1 104.6,127.1 106.0,125.0 107.5,128.6 108.9,133.1 110.4,141.6 111.8,152.2 113.3,153.9 114.7,155.0 116.2,156.8 117.6,163.0 119.0,164.6 120.5,165.6 121.9,166.5 123.4,165.9 124.8,165.6 126.3,164.3 127.7,163.5 129.2,175.5 130.6,176.6 132.1,176.7 133.5,175.4 135.0,172.4 136.4,171.8 137.9,171.8 139.3,172.0 140.8,172.4 142.2,170.5 143.7,170.1 145.1,171.5 146.6,170.1 148.0,172.7 149.5,172.9 150.9,172.8 152.4,172.8 153.8,171.4 155.3,178.2 156.7,178.2 158.2,178.2 159.6,178.2 161.1,178.1 162.5,176.5 164.0,175.9 165.4,174.9 166.9,178.8 168.3,177.4 169.8,179.8 171.2,178.8 172.6,179.9 174.1,178.1 175.5,179.0 177.0,179.6 178.4,179.4 179.9,179.8 181.3,179.5 182.8,175.5 184.2,178.3 185.7,183.0 187.1,184.0 188.6,183.2 190.0,182.7 191.5,177.1 192.9,173.0 194.4,169.5 195.8,167.6 197.3,165.5 198.7,164.2 200.2,164.1 201.6,165.7 203.1,167.1 204.5,169.4 206.0,161.7 207.4,170.4 208.9,172.7 210.3,171.8 211.8,165.8 213.2,164.3 214.7,163.3 216.1,160.7 217.6,161.4 219.0,163.7 220.5,164.8 221.9,162.0 223.4,159.2 224.8,161.0 226.2,156.1 227.7,157.4 229.1,159.3 230.6,161.3 232.0,156.7 233.5,151.9 234.9,153.4 236.4,148.6 237.8,148.9 239.3,148.7 240.7,159.2 242.2,156.1 243.6,152.8 245.1,152.9 246.5,155.0 248.0,150.9 249.4,163.4 250.9,163.0 252.3,162.6 253.8,162.7 255.2,162.7 256.7,158.2 258.1,158.0 259.6,156.2 261.0,155.9 262.5,154.4 263.9,151.9 265.4,151.4 266.8,155.8 268.3,149.4 269.7,146.5 271.2,145.1 272.6,150.1 274.1,137.0 275.5,144.4 277.0,144.8 278.4,143.2 279.8,154.4 281.3,156.5 282.7,152.1 284.2,158.0 285.6,161.9 287.1,164.8 288.5,164.5 290.0,166.1 291.4,167.0 292.9,167.0 294.3,168.6 295.8,167.6 297.2,167.5 298.7,166.8 300.1,165.3 301.6,165.8 303.0,168.4 304.5,162.2 305.9,162.7 307.4,163.9 308.8,159.1 310.3,158.3 311.7,154.8 313.2,155.2 314.6,152.9 316.1,147.1 317.5,151.4 319.0,155.2 320.4,151.0 321.9,153.4 323.3,154.4 324.8,155.1 326.2,160.5 327.7,165.4 329.1,165.1 330.6,162.7 332.0,161.3 333.4,148.6 334.9,146.0 336.3,147.4 337.8,141.5 339.2,151.4 340.7,139.5 342.1,141.7 343.6,161.9 345.0,156.0 346.5,156.2 347.9,143.5 349.4,138.9 350.8,143.5 352.3,140.6 353.7,147.8 355.2,160.3 356.6,150.8 358.1,138.3 359.5,132.4 361.0,137.0 362.4,137.5 363.9,145.4 365.3,142.3 366.8,134.4 368.2,155.2 369.7,142.5 371.1,153.3 372.6,153.4 374.0,141.2 375.5,145.4 376.9,148.4 378.4,154.4 379.8,148.9 381.3,152.0 382.7,157.5 384.2,161.4 385.6,178.2 387.0,172.9 388.5,166.8 389.9,162.0 391.4,162.5 392.8,161.8 394.3,165.0 395.7,165.3 397.2,158.9 398.6,162.2 400.1,161.8 401.5,166.7 403.0,165.8 404.4,164.2 405.9,168.5 407.3,174.1 408.8,173.5 410.2,176.4 411.7,179.9 413.1,179.9 414.6,180.8 416.0,176.1 417.5,176.2 418.9,173.5 420.4,173.7 421.8,172.4 423.3,173.8 424.7,177.0 426.2,166.0 427.6,163.1 429.1,147.5 430.5,152.4 432.0,155.6 433.4,139.4 434.9,136.7 436.3,138.6 437.8,143.3 439.2,130.6 440.6,122.3 442.1,125.4 443.5,113.2 445.0,116.3 446.4,116.4 447.9,115.4 449.3,100.8 450.8,93.7 452.2,86.9 453.7,111.9 455.1,104.1 456.6,106.1 458.0,123.5 459.5,132.6 460.9,133.4 462.4,136.9 463.8,139.8 465.3,132.1 466.7,138.8 468.2,133.1 469.6,132.1 471.1,135.9 472.5,140.6 474.0,133.9 475.4,134.6 476.9,133.9 478.3,133.9 479.8,136.9 481.2,140.0 482.7,145.8 484.1,151.5 485.6,150.9 487.0,151.5 488.5,151.8 489.9,149.5 491.4,149.6 492.8,153.1 494.2,155.0 495.7,154.5 497.1,154.3 498.6,152.0 500.0,154.2 501.5,157.1 502.9,159.8 504.4,159.8 505.8,161.8 507.3,161.8 508.7,162.8 510.2,162.8 511.6,162.8 513.1,162.8 514.5,158.2 516.0,158.0 517.4,158.0 518.9,158.0 520.3,158.0 521.8,152.6 523.2,145.1 524.7,140.6 526.1,136.3 527.6,139.6 529.0,134.5 530.5,122.7 531.9,114.8 533.4,112.4 534.8,106.4 536.3,80.1 537.7,75.0 539.2,85.1 540.6,100.4 542.1,94.4 543.5,80.3 545.0,81.5 546.4,84.4 547.8,75.5 549.3,62.7 550.7,77.1 552.2,64.5 553.6,51.9 555.1,68.9 556.5,51.9 558.0,55.6 559.4,65.2 560.9,72.9 562.3,71.0 563.8,52.7 565.2,54.3 566.7,46.1 568.1,30.6 569.6,63.4 571.0,59.8 572.5,58.9 573.9,52.1 575.4,20.0 576.8,26.3 578.3,29.0 579.7,71.6 581.2,59.3 582.6,71.0 584.1,83.0 585.5,73.3 587.0,67.8 588.4,63.3 589.9,72.0 591.3,70.6 592.8,61.5 594.2,54.6 595.7,69.3 597.1,69.0 598.6,58.0 600.0,66.8 600.0,184 64.0,184" fill="url(#eq_grad)"/>
+  <polyline points="64.0,115.4 65.4,115.4 66.9,115.4 68.3,115.5 69.8,112.5 71.2,114.0 72.7,120.4 74.1,116.8 75.6,113.9 77.0,107.7 78.5,104.5 79.9,97.6 81.4,84.7 82.8,88.2 84.3,94.3 85.7,126.5 87.2,123.9 88.6,127.9 90.1,125.9 91.5,119.3 93.0,118.1 94.4,114.5 95.9,119.7 97.3,118.3 98.8,124.4 100.2,121.2 101.7,126.4 103.1,130.1 104.6,127.1 106.0,125.0 107.5,128.6 108.9,133.1 110.4,141.6 111.8,152.2 113.3,153.9 114.7,155.0 116.2,156.8 117.6,163.0 119.0,164.6 120.5,165.6 121.9,166.5 123.4,165.9 124.8,165.6 126.3,164.3 127.7,163.5 129.2,175.5 130.6,176.6 132.1,176.7 133.5,175.4 135.0,172.4 136.4,171.8 137.9,171.8 139.3,172.0 140.8,172.4 142.2,170.5 143.7,170.1 145.1,171.5 146.6,170.1 148.0,172.7 149.5,172.9 150.9,172.8 152.4,172.8 153.8,171.4 155.3,178.2 156.7,178.2 158.2,178.2 159.6,178.2 161.1,178.1 162.5,176.5 164.0,175.9 165.4,174.9 166.9,178.8 168.3,177.4 169.8,179.8 171.2,178.8 172.6,179.9 174.1,178.1 175.5,179.0 177.0,179.6 178.4,179.4 179.9,179.8 181.3,179.5 182.8,175.5 184.2,178.3 185.7,183.0 187.1,184.0 188.6,183.2 190.0,182.7 191.5,177.1 192.9,173.0 194.4,169.5 195.8,167.6 197.3,165.5 198.7,164.2 200.2,164.1 201.6,165.7 203.1,167.1 204.5,169.4 206.0,161.7 207.4,170.4 208.9,172.7 210.3,171.8 211.8,165.8 213.2,164.3 214.7,163.3 216.1,160.7 217.6,161.4 219.0,163.7 220.5,164.8 221.9,162.0 223.4,159.2 224.8,161.0 226.2,156.1 227.7,157.4 229.1,159.3 230.6,161.3 232.0,156.7 233.5,151.9 234.9,153.4 236.4,148.6 237.8,148.9 239.3,148.7 240.7,159.2 242.2,156.1 243.6,152.8 245.1,152.9 246.5,155.0 248.0,150.9 249.4,163.4 250.9,163.0 252.3,162.6 253.8,162.7 255.2,162.7 256.7,158.2 258.1,158.0 259.6,156.2 261.0,155.9 262.5,154.4 263.9,151.9 265.4,151.4 266.8,155.8 268.3,149.4 269.7,146.5 271.2,145.1 272.6,150.1 274.1,137.0 275.5,144.4 277.0,144.8 278.4,143.2 279.8,154.4 281.3,156.5 282.7,152.1 284.2,158.0 285.6,161.9 287.1,164.8 288.5,164.5 290.0,166.1 291.4,167.0 292.9,167.0 294.3,168.6 295.8,167.6 297.2,167.5 298.7,166.8 300.1,165.3 301.6,165.8 303.0,168.4 304.5,162.2 305.9,162.7 307.4,163.9 308.8,159.1 310.3,158.3 311.7,154.8 313.2,155.2 314.6,152.9 316.1,147.1 317.5,151.4 319.0,155.2 320.4,151.0 321.9,153.4 323.3,154.4 324.8,155.1 326.2,160.5 327.7,165.4 329.1,165.1 330.6,162.7 332.0,161.3 333.4,148.6 334.9,146.0 336.3,147.4 337.8,141.5 339.2,151.4 340.7,139.5 342.1,141.7 343.6,161.9 345.0,156.0 346.5,156.2 347.9,143.5 349.4,138.9 350.8,143.5 352.3,140.6 353.7,147.8 355.2,160.3 356.6,150.8 358.1,138.3 359.5,132.4 361.0,137.0 362.4,137.5 363.9,145.4 365.3,142.3 366.8,134.4 368.2,155.2 369.7,142.5 371.1,153.3 372.6,153.4 374.0,141.2 375.5,145.4 376.9,148.4 378.4,154.4 379.8,148.9 381.3,152.0 382.7,157.5 384.2,161.4 385.6,178.2 387.0,172.9 388.5,166.8 389.9,162.0 391.4,162.5 392.8,161.8 394.3,165.0 395.7,165.3 397.2,158.9 398.6,162.2 400.1,161.8 401.5,166.7 403.0,165.8 404.4,164.2 405.9,168.5 407.3,174.1 408.8,173.5 410.2,176.4 411.7,179.9 413.1,179.9 414.6,180.8 416.0,176.1 417.5,176.2 418.9,173.5 420.4,173.7 421.8,172.4 423.3,173.8 424.7,177.0 426.2,166.0 427.6,163.1 429.1,147.5 430.5,152.4 432.0,155.6 433.4,139.4 434.9,136.7 436.3,138.6 437.8,143.3 439.2,130.6 440.6,122.3 442.1,125.4 443.5,113.2 445.0,116.3 446.4,116.4 447.9,115.4 449.3,100.8 450.8,93.7 452.2,86.9 453.7,111.9 455.1,104.1 456.6,106.1 458.0,123.5 459.5,132.6 460.9,133.4 462.4,136.9 463.8,139.8 465.3,132.1 466.7,138.8 468.2,133.1 469.6,132.1 471.1,135.9 472.5,140.6 474.0,133.9 475.4,134.6 476.9,133.9 478.3,133.9 479.8,136.9 481.2,140.0 482.7,145.8 484.1,151.5 485.6,150.9 487.0,151.5 488.5,151.8 489.9,149.5 491.4,149.6 492.8,153.1 494.2,155.0 495.7,154.5 497.1,154.3 498.6,152.0 500.0,154.2 501.5,157.1 502.9,159.8 504.4,159.8 505.8,161.8 507.3,161.8 508.7,162.8 510.2,162.8 511.6,162.8 513.1,162.8 514.5,158.2 516.0,158.0 517.4,158.0 518.9,158.0 520.3,158.0 521.8,152.6 523.2,145.1 524.7,140.6 526.1,136.3 527.6,139.6 529.0,134.5 530.5,122.7 531.9,114.8 533.4,112.4 534.8,106.4 536.3,80.1 537.7,75.0 539.2,85.1 540.6,100.4 542.1,94.4 543.5,80.3 545.0,81.5 546.4,84.4 547.8,75.5 549.3,62.7 550.7,77.1 552.2,64.5 553.6,51.9 555.1,68.9 556.5,51.9 558.0,55.6 559.4,65.2 560.9,72.9 562.3,71.0 563.8,52.7 565.2,54.3 566.7,46.1 568.1,30.6 569.6,63.4 571.0,59.8 572.5,58.9 573.9,52.1 575.4,20.0 576.8,26.3 578.3,29.0 579.7,71.6 581.2,59.3 582.6,71.0 584.1,83.0 585.5,73.3 587.0,67.8 588.4,63.3 589.9,72.0 591.3,70.6 592.8,61.5 594.2,54.6 595.7,69.3 597.1,69.0 598.6,58.0 600.0,66.8" fill="none" stroke="#00E599" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="600.0" cy="66.8" r="4" fill="#00E599" stroke="#111520" stroke-width="2"/>
+</svg>
+  </div>
+
+  <div class="card"><div class="card-label">Posiciones abiertas al cierre del backtest</div><div style="overflow-x:auto"><table><thead><tr><th>Símbolo</th><th>Entrada</th><th>Cierre BT</th><th>Precio Entrada</th><th>Último Precio</th><th>P&L %</th><th>P&L $</th><th>Estado</th></tr></thead><tbody><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">KLAC</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-09</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-26</td>
+          <td style="font-family:'DM Mono',monospace">$214.06</td>
+          <td style="font-family:'DM Mono',monospace">$246.34</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800;font-weight:700">+15.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800">+$1,194</td>
+          <td><span style="background:rgba(255,184,0,0.12);color:#FFB800;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">OPEN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">LRCX</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-11</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-26</td>
+          <td style="font-family:'DM Mono',monospace">$362.32</td>
+          <td style="font-family:'DM Mono',monospace">$382.06</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800;font-weight:700">+5.4%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800">+$395</td>
+          <td><span style="background:rgba(255,184,0,0.12);color:#FFB800;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">OPEN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AEP</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-23</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-26</td>
+          <td style="font-family:'DM Mono',monospace">$133.68</td>
+          <td style="font-family:'DM Mono',monospace">$138.16</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800;font-weight:700">+3.4%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800">+$368</td>
+          <td><span style="background:rgba(255,184,0,0.12);color:#FFB800;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">OPEN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">MU</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-25</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-26</td>
+          <td style="font-family:'DM Mono',monospace">$1215.46</td>
+          <td style="font-family:'DM Mono',monospace">$1158.08</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800;font-weight:700">-4.7%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800">$-230</td>
+          <td><span style="background:rgba(255,184,0,0.12);color:#FFB800;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">OPEN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">VRTX</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-26</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-26</td>
+          <td style="font-family:'DM Mono',monospace">$494.40</td>
+          <td style="font-family:'DM Mono',monospace">$494.40</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800;font-weight:700">+0.0%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FFB800">+$0</td>
+          <td><span style="background:rgba(255,184,0,0.12);color:#FFB800;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">OPEN</span></td>
+        </tr></tbody></table></div></div>
+
+  <div class="card">
+    <div class="card-label">Log de operaciones cerradas (últimas 30)</div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Símbolo</th><th>Entrada</th><th>Salida</th>
+          <th>Precio Entrada</th><th>Precio Salida</th>
+          <th>P&L %</th><th>P&L $</th><th>Resultado</th>
+        </tr>
+      </thead>
+      <tbody><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">VRTX</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-24</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-25</td>
+          <td style="font-family:'DM Mono',monospace">$475.02</td>
+          <td style="font-family:'DM Mono',monospace">$479.75</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+1.0%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$109</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">UBER</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-24</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-25</td>
+          <td style="font-family:'DM Mono',monospace">$73.86</td>
+          <td style="font-family:'DM Mono',monospace">$72.24</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-2.2%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-241</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">DASH</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-15</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-16</td>
+          <td style="font-family:'DM Mono',monospace">$168.10</td>
+          <td style="font-family:'DM Mono',monospace">$169.99</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+1.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$104</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AMGN</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-11</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-12</td>
+          <td style="font-family:'DM Mono',monospace">$353.93</td>
+          <td style="font-family:'DM Mono',monospace">$355.31</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+0.4%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$42</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">CTAS</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-10</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-11</td>
+          <td style="font-family:'DM Mono',monospace">$180.41</td>
+          <td style="font-family:'DM Mono',monospace">$181.88</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+0.8%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$87</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">PCAR</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-09</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-10</td>
+          <td style="font-family:'DM Mono',monospace">$119.68</td>
+          <td style="font-family:'DM Mono',monospace">$113.97</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-4.8%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-520</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">MRVL</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-04-08</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-10</td>
+          <td style="font-family:'DM Mono',monospace">$114.40</td>
+          <td style="font-family:'DM Mono',monospace">$252.89</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+121.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$8,309</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AMGN</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-05</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-08</td>
+          <td style="font-family:'DM Mono',monospace">$349.54</td>
+          <td style="font-family:'DM Mono',monospace">$345.61</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-1.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-122</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AMGN</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-04</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-05</td>
+          <td style="font-family:'DM Mono',monospace">$345.68</td>
+          <td style="font-family:'DM Mono',monospace">$349.54</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+1.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$104</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">PCAR</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-04</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-05</td>
+          <td style="font-family:'DM Mono',monospace">$118.06</td>
+          <td style="font-family:'DM Mono',monospace">$116.66</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-1.2%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-141</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">CDNS</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-01</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-05</td>
+          <td style="font-family:'DM Mono',monospace">$414.36</td>
+          <td style="font-family:'DM Mono',monospace">$376.25</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-9.2%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-1,029</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">NXPI</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-04-29</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-05</td>
+          <td style="font-family:'DM Mono',monospace">$288.46</td>
+          <td style="font-family:'DM Mono',monospace">$295.25</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+2.4%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$177</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AVGO</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-02</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-04</td>
+          <td style="font-family:'DM Mono',monospace">$481.15</td>
+          <td style="font-family:'DM Mono',monospace">$418.29</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-13.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-1,257</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">DDOG</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-01</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-04</td>
+          <td style="font-family:'DM Mono',monospace">$277.45</td>
+          <td style="font-family:'DM Mono',monospace">$243.65</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-12.2%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-541</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">SNOW</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-28</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-03</td>
+          <td style="font-family:'DM Mono',monospace">$239.01</td>
+          <td style="font-family:'DM Mono',monospace">$241.19</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+0.9%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$78</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AMZN</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-04-09</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-02</td>
+          <td style="font-family:'DM Mono',monospace">$233.53</td>
+          <td style="font-family:'DM Mono',monospace">$256.53</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+9.8%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$897</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">ADBE</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-29</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-01</td>
+          <td style="font-family:'DM Mono',monospace">$259.17</td>
+          <td style="font-family:'DM Mono',monospace">$274.02</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+5.7%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$163</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">TXN</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-04-08</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-06-01</td>
+          <td style="font-family:'DM Mono',monospace">$207.87</td>
+          <td style="font-family:'DM Mono',monospace">$293.34</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+41.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$3,675</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">SMCI</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-28</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-29</td>
+          <td style="font-family:'DM Mono',monospace">$41.32</td>
+          <td style="font-family:'DM Mono',monospace">$46.11</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+11.6%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$297</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">SNOW</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-26</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-27</td>
+          <td style="font-family:'DM Mono',monospace">$177.67</td>
+          <td style="font-family:'DM Mono',monospace">$175.31</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-1.3%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-64</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">ZS</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-26</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-27</td>
+          <td style="font-family:'DM Mono',monospace">$184.31</td>
+          <td style="font-family:'DM Mono',monospace">$126.39</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-31.4%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-2,954</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">ENPH</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-21</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-22</td>
+          <td style="font-family:'DM Mono',monospace">$62.32</td>
+          <td style="font-family:'DM Mono',monospace">$64.00</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+2.7%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$25</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">CPRT</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-21</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-22</td>
+          <td style="font-family:'DM Mono',monospace">$34.38</td>
+          <td style="font-family:'DM Mono',monospace">$33.76</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-1.8%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-205</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">COST</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-19</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-22</td>
+          <td style="font-family:'DM Mono',monospace">$1095.06</td>
+          <td style="font-family:'DM Mono',monospace">$1027.85</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-6.1%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-134</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">DXCM</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-20</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-21</td>
+          <td style="font-family:'DM Mono',monospace">$71.46</td>
+          <td style="font-family:'DM Mono',monospace">$71.87</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+0.6%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$65</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">SNOW</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-19</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-20</td>
+          <td style="font-family:'DM Mono',monospace">$169.53</td>
+          <td style="font-family:'DM Mono',monospace">$166.96</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-1.5%</td>
+          <td style="font-family:'DM Mono',monospace;color:#FF3B5C">$-8</td>
+          <td><span style="background:rgba(255,59,92,0.12);color:#FF3B5C;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">LOSS</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">DXCM</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-19</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-20</td>
+          <td style="font-family:'DM Mono',monospace">$66.93</td>
+          <td style="font-family:'DM Mono',monospace">$71.46</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+6.8%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$743</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">DXCM</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-18</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-19</td>
+          <td style="font-family:'DM Mono',monospace">$65.11</td>
+          <td style="font-family:'DM Mono',monospace">$66.93</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+2.8%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$2</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">ZS</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-18</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-19</td>
+          <td style="font-family:'DM Mono',monospace">$174.56</td>
+          <td style="font-family:'DM Mono',monospace">$175.36</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+0.5%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$41</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr><tr>
+          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">QCOM</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-04-30</td>
+          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">2026-05-19</td>
+          <td style="font-family:'DM Mono',monospace">$178.98</td>
+          <td style="font-family:'DM Mono',monospace">$195.04</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+9.0%</td>
+          <td style="font-family:'DM Mono',monospace;color:#00E599">+$385</td>
+          <td><span style="background:rgba(0,229,153,0.12);color:#00E599;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">WIN</span></td>
+        </tr></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Parámetros del backtest</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;font-size:13px;">
+      <div style="color:var(--muted)">Período: <b style="color:var(--text)">01 Ene 2025 → 26 Jun 2026</b></div>
+      <div style="color:var(--muted)">Universo: <b style="color:var(--text)">60 tickers NASDAQ/NYSE</b></div>
+      <div style="color:var(--muted)">ATR: <b style="color:var(--text)">período 14, multiplicador 2.5×</b></div>
+      <div style="color:var(--muted)">Breakout: <b style="color:var(--text)">máximo 20 días</b></div>
+      <div style="color:var(--muted)">Filtro tendencia: <b style="color:var(--text)">MA 50 días</b></div>
+      <div style="color:var(--muted)">Volumen: <b style="color:var(--text)">≥ 1.5× promedio 20d</b></div>
+      <div style="color:var(--muted)">Riesgo/operación: <b style="color:var(--text)">2% del portafolio</b></div>
+      <div style="color:var(--muted)">Máx posiciones: <b style="color:var(--text)">8 simultáneas</b></div>
+      <div style="color:var(--muted)">Máx por posición: <b style="color:var(--text)">20% del portafolio</b></div>
+      <div style="color:var(--muted)">Comisiones: <b style="color:#FF3B5C">No incluidas</b></div>
+    </div>
+  </div>
+</div>
+
+<footer>Chandelier Exit Backtest · Datos históricos Alpaca IEX · Solo fines educativos · 26 Jun 2026 · 18:06 CT</footer>
+</body>
+</html>
