@@ -212,8 +212,9 @@ def run_scan():
                 stops[sym] = stops.get(sym, entry * 0.95)
 
             sign = "▲" if pnl >= 0 else "▼"
+            atr_str = f"{atr:.2f}" if atr else "N/A"
             log(f"  {sym:<6} ${price:.2f} {sign}{abs(pnl):.1f}% | "
-                f"stop ${stops[sym]:.2f} | ATR {atr:.2f if atr else 'N/A'}")
+                f"stop ${stops[sym]:.2f} | ATR {atr_str}")
 
             if price <= stops[sym]:
                 log(f"  → CHANDELIER STOP HIT — selling {sym}")
