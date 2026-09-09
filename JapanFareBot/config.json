@@ -13,19 +13,13 @@
     { "year": 2026, "month": 12 }
   ],
   "durations_days": [13, 14, 15],
-  "currency": "usd",
 
-  "_comment_data_source": "Travelpayouts Data API (v2/prices/month-matrix): cached fares from real Aviasales user searches, one call per destination per month. show_to_affiliates=false returns the full cached dataset instead of only affiliate-bookable fares.",
-  "show_to_affiliates": false,
-
-  "top_n": 5,
-  "alert_thresholds": {
-    "max_price_usd_destacada": 900,
-    "min_pct_drop_destacada": 10
-  },
+  "_comment": "No hay fuente de precios en vivo gratuita para GDL (ver historial del bot). El reporte solo arma enlaces de busqueda listos para abrir; no hay ranking por precio. priority_anchor_days aplica a NRT/HND, secondary_anchor_days a los demas destinos.",
+  "priority_anchor_days": [5, 20],
+  "secondary_anchor_days": [15],
 
   "email": {
     "to": "pepeuribe@hotmail.com",
-    "subject_template": "[Monitoreo Japón 2026] Mejores Tarifas GDL → Japón - {fecha}"
+    "subject_template": "[Monitoreo Japón 2026] Enlaces de búsqueda GDL → Japón - {fecha}"
   }
 }
