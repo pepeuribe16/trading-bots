@@ -13,16 +13,10 @@
     { "year": 2026, "month": 12 }
   ],
   "durations_days": [13, 14, 15],
-  "us_connection_hubs": ["LAX", "SFO", "SEA", "DFW", "IAH", "ORD", "DEN"],
-  "currency": "USD",
+  "currency": "usd",
 
-  "_comment_quota": "Amadeus self-service test keys have a limited monthly call quota. These intervals keep daily usage sane; tighten them if you upgrade to a production key.",
-  "primary_departure_sample_interval_days": 6,
-  "secondary_departure_sample_interval_days": 12,
-  "secondary_scan_weekday": 0,
-  "max_offers_per_search": 3,
-  "split_ticket_check_top_n": 6,
-  "split_ticket_min_savings_pct": 10,
+  "_comment_data_source": "Travelpayouts Data API (v2/prices/month-matrix): cached fares from real Aviasales user searches, one call per destination per month. show_to_affiliates=false returns the full cached dataset instead of only affiliate-bookable fares.",
+  "show_to_affiliates": false,
 
   "top_n": 5,
   "alert_thresholds": {
