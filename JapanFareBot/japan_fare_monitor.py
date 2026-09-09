@@ -79,7 +79,7 @@ def get_month_matrix(origin, destination, first_of_month):
         timeout=25,
     )
     if resp.status_code != 200:
-        log(f"Travelpayouts {origin}->{destination} {first_of_month}: HTTP {resp.status_code}")
+        log(f"Travelpayouts {origin}->{destination} {first_of_month}: HTTP {resp.status_code} — {resp.text[:300]}")
         return []
     body = resp.json()
     if not body.get("success", False):
