@@ -6,6 +6,7 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         { "source": "/portfolio", "destination": "/portfolio/index.html" },
+        { "source": "/japan-fares", "destination": "/japan-fares/index.html" },
         { "source": "**", "destination": "/index.html" }
       ]
     }

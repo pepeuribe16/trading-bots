@@ -1,0 +1,37 @@
+{
+  "origin": "GDL",
+  "destinations": [
+    { "code": "NRT", "city": "Tokio (Narita)",  "priority": 1 },
+    { "code": "HND", "city": "Tokio (Haneda)",  "priority": 1 },
+    { "code": "KIX", "city": "Osaka",           "priority": 2 },
+    { "code": "NGO", "city": "Nagoya",          "priority": 2 },
+    { "code": "FUK", "city": "Fukuoka",         "priority": 2 },
+    { "code": "CTS", "city": "Sapporo",         "priority": 2 }
+  ],
+  "travel_windows": [
+    { "year": 2026, "month": 11 },
+    { "year": 2026, "month": 12 }
+  ],
+  "durations_days": [13, 14, 15],
+  "us_connection_hubs": ["LAX", "SFO", "SEA", "DFW", "IAH", "ORD", "DEN"],
+  "currency": "USD",
+
+  "_comment_quota": "Amadeus self-service test keys have a limited monthly call quota. These intervals keep daily usage sane; tighten them if you upgrade to a production key.",
+  "primary_departure_sample_interval_days": 6,
+  "secondary_departure_sample_interval_days": 12,
+  "secondary_scan_weekday": 0,
+  "max_offers_per_search": 3,
+  "split_ticket_check_top_n": 6,
+  "split_ticket_min_savings_pct": 10,
+
+  "top_n": 5,
+  "alert_thresholds": {
+    "max_price_usd_destacada": 900,
+    "min_pct_drop_destacada": 10
+  },
+
+  "email": {
+    "to": "pepeuribe@hotmail.com",
+    "subject_template": "[Monitoreo Japón 2026] Mejores Tarifas GDL → Japón - {fecha}"
+  }
+}
