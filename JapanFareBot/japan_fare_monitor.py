@@ -192,7 +192,12 @@ def send_email(subject, report_md):
     msg.attach(MIMEText(report_md, "plain", "utf-8"))
     msg.attach(MIMEText(markdown_to_html_body(report_md), "html", "utf-8"))
 
-    port = int(os.environ.get("SMTP_PORT", "587"))
+    try:
+        port = int(os.environ.get("SMTP_PORT", "587").strip())
+    except ValueError:
+        log("SMTP_PORT no es un número válido; usando 587 por defecto.")
+        port = 587
+
     try:
         with smtplib.SMTP(host, port, timeout=30) as server:
             server.starttls()
