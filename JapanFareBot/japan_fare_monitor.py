@@ -93,6 +93,8 @@ def collect_candidates():
     for dest in DESTINATIONS:
         for w in cfg["travel_windows"]:
             entries = get_month_matrix(ORIGIN, dest["code"], date(w["year"], w["month"], 1))
+            log(f"  {ORIGIN}->{dest['code']} {w['year']}-{w['month']:02d}: {len(entries)} fechas en caché"
+                + (f" (ej: {entries[0]})" if entries else ""))
             for e in entries:
                 if e.get("actual") is False:
                     continue
