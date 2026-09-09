@@ -159,7 +159,41 @@ def markdown_to_html_body(md_text):
     )
 
 
-def render_full_html(report_md, generated_at):
+# ── Historial / pestañas ─────────────────────────────────────────────────────
+def list_historico_dates(out_dir, today):
+    """Fechas con reporte disponible (incluye la de hoy aunque aún no se haya escrito)."""
+    hist_dir = os.path.join(out_dir, "historico")
+    dates = set()
+    if os.path.isdir(hist_dir):
+        for fname in os.listdir(hist_dir):
+            if fname.endswith(".html"):
+                d = fname[:-5]
+                try:
+                    datetime.strptime(d, "%Y-%m-%d")
+                    dates.add(d)
+                except ValueError:
+                    continue
+    dates.add(today)
+    return sorted(dates, reverse=True)
+
+
+def render_tabs(dates, current, in_historico, max_tabs=14):
+    if not dates:
+        return ""
+    latest = dates[0]
+    items = []
+    for d in dates[:max_tabs]:
+        label = "Hoy" if d == latest else d
+        if in_historico:
+            href = "../index.html" if d == latest else f"{d}.html"
+        else:
+            href = "index.html" if d == latest else f"historico/{d}.html"
+        cls = ' class="active"' if d == current else ""
+        items.append(f'<a href="{href}"{cls}>{label}</a>')
+    return '<nav class="tabs">' + "".join(items) + "</nav>"
+
+
+def render_full_html(report_md, generated_at, tabs_html=""):
     body = markdown_to_html_body(report_md)
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
@@ -171,7 +205,11 @@ h1,h2,h3{{color:#f1f5f9}}
 a{{color:#60a5fa}}
 hr{{border-color:#334155;margin:20px 0}}
 li{{margin:4px 0}}
-</style></head><body>{body}
+.tabs{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}}
+.tabs a{{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:5px 12px;
+  font-size:.85em;text-decoration:none;color:#cbd5e1}}
+.tabs a.active{{background:#2563eb;border-color:#2563eb;color:#fff}}
+</style></head><body>{tabs_html}{body}
 <footer style="text-align:center;color:#475569;margin-top:32px;font-size:.82em">
 Generado automáticamente · japan-fare-monitor</footer>
 </body></html>"""
@@ -217,11 +255,14 @@ def run():
     out_dir = os.path.join(_HERE, "..", "public", "japan-fares")
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(os.path.join(out_dir, "historico"), exist_ok=True)
-    html = render_full_html(report_md, fecha)
+
+    dates = list_historico_dates(out_dir, fecha)
+    html_index = render_full_html(report_md, fecha, render_tabs(dates, fecha, in_historico=False))
+    html_hist = render_full_html(report_md, fecha, render_tabs(dates, fecha, in_historico=True))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html)
+        f.write(html_index)
     with open(os.path.join(out_dir, "historico", f"{fecha}.html"), "w", encoding="utf-8") as f:
-        f.write(html)
+        f.write(html_hist)
 
     subject = cfg["email"]["subject_template"].format(fecha=fecha)
     send_email(subject, report_md)
