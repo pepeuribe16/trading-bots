@@ -3,22 +3,26 @@ GDL → Japan Fare Monitor
 ------------------------
 Agente diario de travel hacking: busca las tarifas mas baratas GDL -> Japon
 (NRT/HND prioritarios; KIX/NGO/FUK/CTS secundarios) para viajes de 13-15 dias
-en noviembre-diciembre 2026, con conexiones permitidas en EE.UU.
+en noviembre-diciembre 2026.
 
-Fuente de datos : Amadeus Self-Service "Flight Offers Search" (v2), autenticado
-                   con AMADEUS_API_KEY / AMADEUS_API_SECRET (GitHub Secrets).
+Fuente de datos : Travelpayouts Data API (v2/prices/month-matrix) — tarifas
+                   cacheadas a partir de busquedas reales de usuarios de
+                   Aviasales. Es gratis y de alta inmediata (sin tarjeta),
+                   a diferencia de Amadeus Self-Service, que cerro su alta
+                   self-service el 17 de julio de 2026.
+
+                   Limitacion frente a una busqueda en vivo: esta API no
+                   entrega aerolineas/horarios de conexion exactos, solo
+                   precio, fechas y numero de escalas. Los enlaces directos
+                   (Google Flights/Skyscanner/Kayak) sirven para ver el
+                   itinerario completo antes de comprar.
+
 Estado           : price_history.json (mejor precio historico + serie diaria).
 Salida           : public/japan-fares/index.html (Firebase) + correo HTML.
-
-Para conservar la cuota mensual de un key de prueba de Amadeus, la busqueda
-no barre TODAS las combinaciones de fecha/duracion/aeropuerto cada dia:
-usa un muestreo configurable (config.json) sobre las fechas de salida, y
-solo explora los destinos secundarios un dia fijo de la semana.
 """
 import json
 import os
 import smtplib
-import time
 from datetime import date, datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -32,18 +36,11 @@ with open(os.path.join(_HERE, "config.json"), encoding="utf-8") as f:
 
 HISTORY_FILE = os.path.join(_HERE, "price_history.json")
 
-# El entorno "test" de Amadeus usa un dataset de muestra con cobertura limitada
-# de rutas/fechas lejanas; para inventario y precios reales en producción, usa
-# credenciales de producción y AMADEUS_ENV=production.
-AMADEUS_BASE = (
-    "https://api.amadeus.com" if os.environ.get("AMADEUS_ENV") == "production"
-    else "https://test.api.amadeus.com"
-)
+TRAVELPAYOUTS_BASE = "https://api.travelpayouts.com"
 
 ORIGIN = cfg["origin"]
 DESTINATIONS = cfg["destinations"]
-DURATIONS = cfg["durations_days"]
-US_HUBS = cfg["us_connection_hubs"]
+DURATIONS = set(cfg["durations_days"])
 TOP_N = cfg["top_n"]
 
 STAR_LABELS = {5: "⭐⭐⭐⭐⭐", 4: "⭐⭐⭐⭐", 3: "⭐⭐⭐", 2: "⭐⭐", 1: "⭐"}
@@ -67,128 +64,58 @@ def save_history(hist):
         json.dump(hist, f, indent=2, ensure_ascii=False)
 
 
-# ── Amadeus ──────────────────────────────────────────────────────────────────
-def get_amadeus_token():
-    resp = requests.post(
-        f"{AMADEUS_BASE}/v1/security/oauth2/token",
-        data={
-            "grant_type": "client_credentials",
-            "client_id": os.environ["AMADEUS_API_KEY"],
-            "client_secret": os.environ["AMADEUS_API_SECRET"],
-        },
-        timeout=20,
-    )
-    resp.raise_for_status()
-    return resp.json()["access_token"]
-
-
-def _parse_iso8601_duration(dur):
-    """'PT18H30M' -> 1110 (minutos). Robusto a piezas faltantes."""
-    if not dur or not dur.startswith("PT"):
-        return 0
-    body = dur[2:]
-    hours = minutes = 0
-    num = ""
-    for ch in body:
-        if ch.isdigit():
-            num += ch
-        elif ch == "H":
-            hours = int(num or 0)
-            num = ""
-        elif ch == "M":
-            minutes = int(num or 0)
-            num = ""
-    return hours * 60 + minutes
-
-
-def _fmt_minutes(mins):
-    h, m = divmod(mins, 60)
-    return f"{h}h {m}m" if m else f"{h}h"
-
-
-def _parse_itinerary(itin):
-    segs = itin["segments"]
-    stops = [s["arrival"]["iataCode"] for s in segs[:-1]]
-    carriers = sorted({s["carrierCode"] for s in segs})
-    connection_minutes = []
-    for i in range(len(segs) - 1):
-        arr = datetime.fromisoformat(segs[i]["arrival"]["at"])
-        dep = datetime.fromisoformat(segs[i + 1]["departure"]["at"])
-        connection_minutes.append(int((dep - arr).total_seconds() // 60))
-    return {
-        "stops": stops,
-        "carriers": carriers,
-        "duration_min": _parse_iso8601_duration(itin.get("duration", "")),
-        "connection_minutes": connection_minutes,
-        "departure_at": segs[0]["departure"]["at"],
-        "arrival_at": segs[-1]["arrival"]["at"],
-        "departure_airport": segs[0]["departure"]["iataCode"],
-        "arrival_airport": segs[-1]["arrival"]["iataCode"],
-    }
-
-
-def search_offers(token, origin, destination, dep_date, ret_date=None, max_results=3):
-    params = {
-        "originLocationCode": origin,
-        "destinationLocationCode": destination,
-        "departureDate": dep_date.isoformat(),
-        "adults": 1,
-        "currencyCode": "USD",
-        "max": max_results,
-        "nonStop": "false",
-    }
-    if ret_date:
-        params["returnDate"] = ret_date.isoformat()
-
+# ── Travelpayouts ────────────────────────────────────────────────────────────
+def get_month_matrix(origin, destination, first_of_month):
     resp = requests.get(
-        f"{AMADEUS_BASE}/v2/shopping/flight-offers",
-        headers={"Authorization": f"Bearer {token}"},
-        params=params,
+        f"{TRAVELPAYOUTS_BASE}/v2/prices/month-matrix",
+        headers={"X-Access-Token": os.environ["TRAVELPAYOUTS_TOKEN"]},
+        params={
+            "currency": cfg["currency"],
+            "origin": origin,
+            "destination": destination,
+            "month": first_of_month.isoformat(),
+            "show_to_affiliates": str(cfg["show_to_affiliates"]).lower(),
+        },
         timeout=25,
     )
-    if resp.status_code == 429:
-        time.sleep(2)
-        resp = requests.get(
-            f"{AMADEUS_BASE}/v2/shopping/flight-offers",
-            headers={"Authorization": f"Bearer {token}"},
-            params=params,
-            timeout=25,
-        )
     if resp.status_code != 200:
+        log(f"Travelpayouts {origin}->{destination} {first_of_month}: HTTP {resp.status_code}")
         return []
-
-    data = resp.json().get("data", [])
-    offers = []
-    for off in data:
-        try:
-            price = float(off["price"]["total"])
-            itins = off["itineraries"]
-            offers.append({
-                "price_usd": price,
-                "outbound": _parse_itinerary(itins[0]),
-                "inbound": _parse_itinerary(itins[1]) if len(itins) > 1 else None,
-            })
-        except (KeyError, IndexError, ValueError):
-            continue
-    offers.sort(key=lambda o: o["price_usd"])
-    return offers
+    body = resp.json()
+    if not body.get("success", False):
+        log(f"Travelpayouts {origin}->{destination} {first_of_month}: {body.get('error')}")
+        return []
+    return body.get("data") or []
 
 
-# ── Muestreo de fechas ───────────────────────────────────────────────────────
-def _month_dates(year, month):
-    d = date(year, month, 1)
-    out = []
-    while d.month == month:
-        out.append(d)
-        d += timedelta(days=1)
-    return out
-
-
-def sample_departure_dates(interval_days):
-    all_days = []
-    for w in cfg["travel_windows"]:
-        all_days.extend(_month_dates(w["year"], w["month"]))
-    return all_days[::interval_days]
+def collect_candidates():
+    candidates = []
+    for dest in DESTINATIONS:
+        for w in cfg["travel_windows"]:
+            entries = get_month_matrix(ORIGIN, dest["code"], date(w["year"], w["month"], 1))
+            for e in entries:
+                if e.get("actual") is False:
+                    continue
+                try:
+                    dep = datetime.strptime(e["depart_date"], "%Y-%m-%d").date()
+                    ret = datetime.strptime(e["return_date"], "%Y-%m-%d").date()
+                    price = float(e["value"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                duration = (ret - dep).days
+                if duration not in DURATIONS:
+                    continue
+                candidates.append({
+                    "dest_code": dest["code"],
+                    "dest_city": dest["city"],
+                    "dep_date": dep,
+                    "ret_date": ret,
+                    "duration": duration,
+                    "price_usd": price,
+                    "stops": e.get("number_of_changes"),
+                    "found_at": e.get("found_at"),
+                })
+    return candidates
 
 
 # ── FX ───────────────────────────────────────────────────────────────────────
@@ -201,66 +128,6 @@ def usd_to_mxn_rate():
     except Exception as e:
         log(f"No se pudo obtener tipo de cambio en vivo ({e}); usando 18.5 MXN/USD de respaldo")
         return 18.5
-
-
-# ── Recoleccion de ofertas ──────────────────────────────────────────────────
-def collect_candidates(token):
-    today_weekday = date.today().weekday()
-    candidates = []
-
-    for dest in DESTINATIONS:
-        is_primary = dest["priority"] == 1
-        if not is_primary and today_weekday != cfg["secondary_scan_weekday"]:
-            continue
-        interval = (
-            cfg["primary_departure_sample_interval_days"]
-            if is_primary
-            else cfg["secondary_departure_sample_interval_days"]
-        )
-        dep_dates = sample_departure_dates(interval)
-
-        for dep_date in dep_dates:
-            for duration in DURATIONS:
-                ret_date = dep_date + timedelta(days=duration)
-                offers = search_offers(
-                    token, ORIGIN, dest["code"], dep_date, ret_date,
-                    max_results=cfg["max_offers_per_search"],
-                )
-                time.sleep(0.15)
-                for off in offers:
-                    candidates.append({
-                        "dest_code": dest["code"],
-                        "dest_city": dest["city"],
-                        "dep_date": dep_date,
-                        "ret_date": ret_date,
-                        "duration": duration,
-                        "price_usd": off["price_usd"],
-                        "outbound": off["outbound"],
-                        "inbound": off["inbound"],
-                        "split_ticket": False,
-                    })
-    return candidates
-
-
-def check_split_tickets(token, candidates):
-    """Para las mejores candidatas, compara contra dos boletos one-way separados."""
-    top = sorted(candidates, key=lambda c: c["price_usd"])[: cfg["split_ticket_check_top_n"]]
-    min_savings = cfg["split_ticket_min_savings_pct"] / 100
-
-    for c in top:
-        out_offers = search_offers(token, ORIGIN, c["dest_code"], c["dep_date"], max_results=1)
-        time.sleep(0.15)
-        in_offers = search_offers(token, c["dest_code"], ORIGIN, c["ret_date"], max_results=1)
-        time.sleep(0.15)
-        if not out_offers or not in_offers:
-            continue
-        split_total = out_offers[0]["price_usd"] + in_offers[0]["price_usd"]
-        if split_total < c["price_usd"] * (1 - min_savings):
-            c["price_usd"] = split_total
-            c["outbound"] = out_offers[0]["outbound"]
-            c["inbound"] = in_offers[0]["outbound"]
-            c["split_ticket"] = True
-    return candidates
 
 
 # ── Ranking, alertas, links ─────────────────────────────────────────────────
@@ -286,14 +153,11 @@ def star_rating(c, history):
     score = 0
     if c["price_usd"] < cfg["alert_thresholds"]["max_price_usd_destacada"]:
         score += 2
-    total_stops = len(c["outbound"]["stops"]) + (len(c["inbound"]["stops"]) if c["inbound"] else 0)
-    if total_stops <= 2:
-        score += 1
-    if not c["split_ticket"]:
+    if c["stops"] is not None and c["stops"] <= 1:
         score += 1
     prev_best = history.get("best_price_usd")
     if prev_best and c["price_usd"] <= prev_best:
-        score += 1
+        score += 2
     return min(5, max(1, score))
 
 
@@ -327,34 +191,19 @@ def rank_top(candidates, n):
 
 
 # ── Reporte ──────────────────────────────────────────────────────────────────
-def _route_text(itin, hubs):
-    stops = itin["stops"]
-    if not stops:
-        return "Directo"
-    labeled = [f"{s} (EE.UU.)" if s in hubs else s for s in stops]
-    return " → ".join(labeled)
-
-
 def _advantages_disadvantages(c):
     adv, disadv = [], []
-    total_stops = len(c["outbound"]["stops"]) + (len(c["inbound"]["stops"]) if c["inbound"] else 0)
-    if total_stops == 0:
-        adv.append("Vuelo directo")
-    elif total_stops <= 2:
+    if c["stops"] == 0:
+        adv.append("Vuelo directo (según dato cacheado)")
+    elif c["stops"] is not None and c["stops"] <= 1:
         adv.append("Pocas escalas")
-    else:
-        disadv.append("Múltiples escalas, viaje más largo")
+    elif c["stops"] is not None:
+        disadv.append(f"{c['stops']} escalas")
     if c["price_usd"] < cfg["alert_thresholds"]["max_price_usd_destacada"]:
         adv.append("Precio por debajo del umbral de oferta destacada")
-    if c["split_ticket"]:
-        adv.append("Ahorro significativo combinando boletos separados")
-        disadv.append("Boletos separados: sin protección de conexión, hay que re-facturar equipaje")
-    if any(m < 90 for m in c["outbound"]["connection_minutes"]):
-        disadv.append("Conexión ajustada en el tramo de ida (<90 min)")
+    disadv.append("Precio cacheado (no es cotización en vivo) — confirma en el enlace antes de comprar")
     if not adv:
         adv.append("Buena relación precio-duración")
-    if not disadv:
-        disadv.append("Sin desventajas relevantes detectadas")
     return adv, disadv
 
 
@@ -362,10 +211,7 @@ def render_option(rank, c, history, mxn_rate):
     price_mxn = c["price_usd"] * mxn_rate
     stars = star_rating(c, history)
     adv, disadv = _advantages_disadvantages(c)
-    out, ret = c["outbound"], c["inbound"]
-    airlines = sorted(set(out["carriers"] + (ret["carriers"] if ret else [])))
-    total_travel_min = out["duration_min"] + (ret["duration_min"] if ret else 0)
-    conn_out = ", ".join(_fmt_minutes(m) for m in out["connection_minutes"]) or "N/A"
+    stops_txt = "Directo" if c["stops"] == 0 else f"{c['stops']} escala(s)" if c["stops"] is not None else "N/D"
     gf = google_flights_link(ORIGIN, c["dest_code"], c["dep_date"], c["ret_date"])
     sk = skyscanner_link(ORIGIN, c["dest_code"], c["dep_date"], c["ret_date"])
     ky = kayak_link(ORIGIN, c["dest_code"], c["dep_date"], c["ret_date"])
@@ -378,13 +224,9 @@ def render_option(rank, c, history, mxn_rate):
 
 **Fechas:** Salida {c['dep_date'].isoformat()} · Regreso {c['ret_date'].isoformat()} · Duración {c['duration']} días
 
-**Ruta:** {', '.join(airlines)}{' (boletos separados)' if c['split_ticket'] else ''}
-- Escalas ida: {_route_text(out, US_HUBS)}
-- Escalas regreso: {_route_text(ret, US_HUBS) if ret else 'N/A'}
-- Tiempo de conexión (ida): {conn_out}
-- Tiempo total de viaje: {_fmt_minutes(total_travel_min)}
+**Ruta:** {stops_txt} · aerolíneas y horarios exactos en los enlaces de abajo
 
-**Aeropuertos:** Salida {ORIGIN} ({out['departure_airport']}) · Llegada {c['dest_city']} ({c['dest_code']})
+**Aeropuertos:** Salida {ORIGIN} · Llegada {c['dest_city']} ({c['dest_code']})
 
 **Ventajas:** {'; '.join(adv)}
 
@@ -430,8 +272,8 @@ def recommendation(history, top, today_best):
     if has_destacada:
         return (
             "**COMPRAR HOY.** Se detectó una oferta destacada (por debajo del mejor precio "
-            "histórico, del umbral de USD 900, o con una caída >10% vs. ayer). Este tipo de "
-            "precios en la ruta GDL→Japón para nov-dic no suele mantenerse más de 24-48h."
+            "histórico, del umbral de USD 900, o con una caída >10% vs. ayer). Confirma el "
+            "itinerario exacto en el enlace antes de pagar, ya que el dato es cacheado."
         )
     if trend_down:
         return (
@@ -461,6 +303,11 @@ def build_report(top, history, mxn_rate):
     destacadas = [c for c in top if c["destacada"]]
 
     parts = [f"# Monitoreo Japón 2026 — GDL → Japón ({fecha})\n"]
+    parts.append(
+        "_Precios cacheados de búsquedas reales en Aviasales (Travelpayouts Data API). "
+        "No es cotización en vivo: confirma itinerario y disponibilidad en los enlaces "
+        "antes de comprar._\n"
+    )
     if destacadas:
         parts.append("## 🔥 OFERTA DESTACADA DETECTADA\n")
         parts.append(render_option(1, destacadas[0], history, mxn_rate))
@@ -560,17 +407,15 @@ def send_email(subject, report_md):
 # ── Main ─────────────────────────────────────────────────────────────────────
 def run():
     log("japan-fare-monitor iniciando...")
-    token = get_amadeus_token()
 
-    log("Recolectando ofertas (Amadeus Flight Offers Search)...")
-    candidates = collect_candidates(token)
-    log(f"{len(candidates)} ofertas candidatas encontradas")
+    log("Recolectando tarifas (Travelpayouts Data API)...")
+    candidates = collect_candidates()
+    log(f"{len(candidates)} ofertas candidatas encontradas (duración 13-15 días)")
 
     if not candidates:
-        log("Sin resultados en esta ejecución (posible falta de disponibilidad o cuota agotada).")
+        log("Sin resultados en esta ejecución (sin datos cacheados para esas fechas/duración).")
         return
 
-    candidates = check_split_tickets(token, candidates)
     history = load_history()
     top = rank_top(candidates, TOP_N)
     mxn_rate = usd_to_mxn_rate()
