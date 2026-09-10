@@ -141,53 +141,127 @@ def get_top_losers():
     return losers[:5]
 
 
+VERDICT_COLOR = {"COMPRAR": "var(--green)", "ESPERAR": "var(--yellow)", "EVITAR": "var(--red)"}
+
+
 def generate_html(losers, analyses):
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    avg_chg = sum(l["change_pct"] for l in losers) / len(losers)
+
     cards = ""
     for l, (reason, valuation, verdict, v_color, v_reason, rsi, pos_52w) in zip(losers, analyses):
-        rsi_badge = f'<span style="background:#334155;padding:2px 8px;border-radius:12px;font-size:.8em">RSI {rsi}</span>' if rsi else ""
-        pos_badge = f'<span style="background:#334155;padding:2px 8px;border-radius:12px;font-size:.8em">52w {pos_52w:.0f}%</span>' if pos_52w is not None else ""
+        badge_color = VERDICT_COLOR.get(verdict, "var(--muted)")
+        rsi_badge = f'<span class="tag">RSI {rsi}</span>' if rsi else ""
+        pos_badge = f'<span class="tag">52w {pos_52w:.0f}%</span>' if pos_52w is not None else ""
         cards += f"""
         <div class="card">
-            <div class="card-header">
-                <span class="symbol">{l['symbol']}</span>
-                <span class="change">▼{abs(l['change_pct']):.2f}%</span>
-                <span class="verdict" style="background:{v_color}">{verdict}</span>
-            </div>
-            <div class="price">${l['price']:.2f} <span class="prev">(ayer: ${l['prev']:.2f})</span>
-                &nbsp;{rsi_badge}{pos_badge}
-            </div>
-            <div class="section"><strong>¿Por qué bajó?</strong><p>{reason}</p></div>
-            <div class="section"><strong>Valuación</strong><p>{valuation}</p></div>
-            <div class="section"><strong>Veredicto</strong><p>{v_reason}</p></div>
+          <div class="loser-head">
+            <span class="loser-symbol">{l['symbol']}</span>
+            <span class="loser-change">▼{abs(l['change_pct']):.2f}%</span>
+            <span class="verdict-badge" style="background:{badge_color}">{verdict}</span>
+          </div>
+          <div class="loser-price">${l['price']:.2f} <span class="prev">(ayer ${l['prev']:.2f})</span>{rsi_badge}{pos_badge}</div>
+          <div class="loser-section"><span class="label">¿Por qué bajó?</span><p>{reason}</p></div>
+          <div class="loser-section"><span class="label">Valuación</span><p>{valuation}</p></div>
+          <div class="loser-section"><span class="label">Veredicto</span><p>{v_reason}</p></div>
         </div>"""
 
     return f"""<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Market Losers · {date_str}</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+:root {{
+  --bg:#0A0C10; --surface:#111520; --surface2:#181D2B;
+  --border:rgba(255,255,255,0.07); --text:#E8ECF4; --muted:#6B7A99;
+  --green:#00E599; --red:#FF3B5C; --yellow:#FFB800; --blue:#4D8BFF;
+}}
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:24px}}
-h1{{font-size:1.8em;font-weight:700;margin-bottom:4px}}
-.subtitle{{color:#94a3b8;margin-bottom:24px}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}}
-.card{{background:#1e293b;border-radius:12px;padding:20px;border:1px solid #334155}}
-.card-header{{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}}
-.symbol{{font-size:1.4em;font-weight:700;color:#f1f5f9}}
-.change{{font-size:1.1em;color:#f87171;font-weight:600}}
-.verdict{{padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:700;color:white;margin-left:auto}}
-.price{{font-size:1.1em;font-weight:600;color:#cbd5e1;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
-.prev{{font-size:.85em;color:#64748b}}
-.section{{margin-top:12px}}
-.section strong{{color:#94a3b8;font-size:.8em;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}}
-.section p{{color:#cbd5e1;line-height:1.5;font-size:.92em}}
-footer{{text-align:center;color:#475569;margin-top:32px;font-size:.82em}}
-</style></head><body>
-<h1>📉 Market Losers Dashboard</h1>
-<p class="subtitle">Top 5 mayores caídas · {date_str} · NYSE/NASDAQ</p>
-<div class="grid">{cards}</div>
+body{{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}}
+body::before{{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(77,139,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(77,139,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}}
+.nav{{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:10px 24px}}
+.nav-label{{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}}
+.nav-links{{display:flex;gap:8px}}
+.nav-links a{{text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:0.5px}}
+.nav-links a.active{{background:var(--blue);color:#fff}}
+.nav-links a.inactive{{background:rgba(255,255,255,0.07);color:var(--muted)}}
+.wrap{{position:relative;z-index:10;padding:72px 24px 60px;max-width:1040px;margin:0 auto}}
+.eyebrow{{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:8px}}
+.pulse{{width:6px;height:6px;background:var(--blue);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}}
+@keyframes pulse{{0%,100%{{opacity:1;transform:scale(1)}}50%{{opacity:0.4;transform:scale(0.7)}}}}
+h1{{font-family:'DM Serif Display',serif;font-size:clamp(28px,6vw,44px);line-height:1.1;color:#fff;margin-bottom:4px}}
+h1 span{{color:var(--red);font-style:italic}}
+.subtitle{{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:28px}}
+.metrics{{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:28px}}
+.metric{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}}
+.metric-label{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}}
+.metric-val{{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:#fff}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}}
+.card{{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px}}
+.loser-head{{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}}
+.loser-symbol{{font-family:'DM Serif Display',serif;font-size:1.5em;color:#fff}}
+.loser-change{{font-family:'DM Mono',monospace;font-size:1.05em;color:var(--red);font-weight:600}}
+.verdict-badge{{padding:4px 12px;border-radius:20px;font-family:'Syne',sans-serif;font-size:.72em;
+  font-weight:700;letter-spacing:.5px;color:#0A0C10;margin-left:auto}}
+.loser-price{{font-family:'DM Mono',monospace;font-size:1.05em;color:var(--text);margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
+.prev{{font-size:.82em;color:var(--muted)}}
+.tag{{background:var(--surface2);padding:2px 9px;border-radius:12px;font-size:.72em;color:var(--muted)}}
+.loser-section{{margin-top:12px}}
+.loser-section .label{{color:var(--muted);font-size:.75em;text-transform:uppercase;letter-spacing:.08em;
+  display:block;margin-bottom:4px;font-family:'DM Mono',monospace}}
+.loser-section p{{color:var(--text);line-height:1.55;font-size:.9em}}
+footer{{position:relative;z-index:10;text-align:center;padding:20px;
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
+  border-top:1px solid var(--border);margin-top:32px}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-label">Market Intelligence</span>
+  <div class="nav-links">
+    <a href="/" class="active">📉 Caídas</a>
+    <a href="/portfolio" class="inactive">🤖 Auto BOT</a>
+    <a href="/historico" class="inactive">📅 Historial</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="eyebrow"><div class="pulse"></div> NYSE / NASDAQ · Análisis automático</div>
+  <h1>Market <span>Losers</span></h1>
+  <div class="subtitle">📅 {date_str}</div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Mayor Caída</div>
+      <div class="metric-val" style="color:var(--red)">{losers[0]['symbol']} ▼{abs(losers[0]['change_pct']):.1f}%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Promedio Top 5</div>
+      <div class="metric-val" style="color:var(--red)">▼{abs(avg_chg):.1f}%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Universo Analizado</div>
+      <div class="metric-val">{len(UNIVERSE)}</div>
+    </div>
+  </div>
+
+  <div class="grid">{cards}</div>
+</div>
+
 <footer>Análisis automático con yfinance (P/E · RSI · Rango 52 semanas) · market-dashboard-gga.web.app</footer>
-</body></html>"""
+</body>
+</html>"""
 
 
 def run():
