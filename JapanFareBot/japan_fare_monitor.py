@@ -91,7 +91,15 @@ def build_rows():
     return rows
 
 
-# ── Reporte ──────────────────────────────────────────────────────────────────
+MESES_ES = {1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
+            7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"}
+
+
+def fmt_es(d):
+    return f"{d.day} {MESES_ES[d.month]} {d.year}"
+
+
+# ── Reporte (correo, en texto/markdown) ─────────────────────────────────────
 def render_row(row):
     legs_md = "\n".join(
         f"  - **{leg['duration']} días** (regreso {leg['ret_date'].isoformat()}): "
@@ -101,9 +109,8 @@ def render_row(row):
     return f"- **{row['dest_city']} ({row['dest_code']})** — salida {row['dep_date'].isoformat()}\n{legs_md}"
 
 
-def build_report():
+def build_report(rows):
     fecha = date.today().isoformat()
-    rows = build_rows()
     priority_rows = [r for r in rows if r["priority"] == 1]
     secondary_rows = [r for r in rows if r["priority"] == 2]
 
@@ -193,25 +200,88 @@ def render_tabs(dates, current, in_historico, max_tabs=14):
     return '<nav class="tabs">' + "".join(items) + "</nav>"
 
 
-def render_full_html(report_md, generated_at, tabs_html=""):
-    body = markdown_to_html_body(report_md)
+WEB_CSS = """
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;
+  margin:0;padding:24px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:1.7em;font-weight:700;margin:0 0 4px;color:#f1f5f9}
+.subtitle{color:#94a3b8;margin:0 0 18px;font-size:.95em}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+.tabs a{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:5px 12px;
+  font-size:.85em;text-decoration:none;color:#cbd5e1}
+.tabs a.active{background:#2563eb;border-color:#2563eb;color:#fff}
+.info-box{background:#1e293b;border:1px solid #334155;border-radius:10px;
+  padding:14px 18px;margin-bottom:28px;font-size:.88em;color:#cbd5e1;line-height:1.55}
+.info-box strong{color:#f1f5f9}
+h2.section{font-size:1.15em;color:#f1f5f9;margin:30px 0 14px;padding-bottom:6px;
+  border-bottom:1px solid #334155}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:#1e293b;border-radius:12px;padding:18px;border:1px solid #334155}
+.card-header{display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:10px;flex-wrap:wrap;gap:6px}
+.dest{font-size:1.05em;font-weight:700;color:#f1f5f9}
+.dest small{color:#94a3b8;font-weight:500;margin-left:4px}
+.date-badge{background:#334155;color:#cbd5e1;padding:3px 10px;border-radius:12px;
+  font-size:.78em;white-space:nowrap}
+.dur-row{padding:10px 0;border-top:1px solid #334155}
+.dur-row:first-child{border-top:none;padding-top:0}
+.dur-main{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.dur-label{font-weight:600;color:#e2e8f0}
+.dur-return{color:#94a3b8;font-size:.85em}
+.links a{display:inline-block;background:#0f172a;border:1px solid #334155;color:#93c5fd;
+  text-decoration:none;font-size:.8em;padding:4px 10px;border-radius:8px;margin:2px 4px 0 0}
+.links a:hover{background:#334155}
+footer{text-align:center;color:#475569;margin-top:36px;font-size:.82em}
+"""
+
+
+def render_card(row):
+    dur_rows = "".join(f"""
+      <div class="dur-row">
+        <div class="dur-main">
+          <span class="dur-label">{leg['duration']} días</span>
+          <span class="dur-return">regreso {fmt_es(leg['ret_date'])}</span>
+        </div>
+        <div class="links">
+          <a href="{leg['google_flights']}" target="_blank" rel="noopener">Google Flights</a>
+          <a href="{leg['skyscanner']}" target="_blank" rel="noopener">Skyscanner</a>
+          <a href="{leg['kayak']}" target="_blank" rel="noopener">Kayak</a>
+        </div>
+      </div>""" for leg in row["legs"])
+    return f"""
+    <div class="card">
+      <div class="card-header">
+        <span class="dest">{row['dest_city']}<small>{row['dest_code']}</small></span>
+        <span class="date-badge">Sale {fmt_es(row['dep_date'])}</span>
+      </div>
+      {dur_rows}
+    </div>"""
+
+
+def render_web_page(rows, tabs_html, generated_at):
+    priority_cards = "".join(render_card(r) for r in rows if r["priority"] == 1)
+    secondary_cards = "".join(render_card(r) for r in rows if r["priority"] == 2)
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Enlaces GDL → Japón · {generated_at}</title>
-<style>
-body{{background:#0f172a;color:#e2e8f0;padding:24px}}
-h1,h2,h3{{color:#f1f5f9}}
-a{{color:#60a5fa}}
-hr{{border-color:#334155;margin:20px 0}}
-li{{margin:4px 0}}
-.tabs{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}}
-.tabs a{{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:5px 12px;
-  font-size:.85em;text-decoration:none;color:#cbd5e1}}
-.tabs a.active{{background:#2563eb;border-color:#2563eb;color:#fff}}
-</style></head><body>{tabs_html}{body}
-<footer style="text-align:center;color:#475569;margin-top:32px;font-size:.82em">
-Generado automáticamente · japan-fare-monitor</footer>
+<style>{WEB_CSS}</style></head><body>
+<div class="wrap">
+<h1>✈️ GDL → Japón</h1>
+<p class="subtitle">Enlaces de búsqueda para viajes de 13-15 días · noviembre-diciembre 2026</p>
+{tabs_html}
+<div class="info-box"><strong>¿Por qué no hay precios aquí?</strong> No existe una fuente de
+precios en vivo gratuita para GDL como origen (Amadeus Self-Service cerró su alta el 17 de
+julio de 2026; la Data API de Travelpayouts es gratis pero solo tiene caché de rutas con
+historial de búsqueda real, y GDL no lo tiene). Da clic en cualquier enlace para ver tarifas
+y disponibilidad reales al momento.</div>
+<h2 class="section">Tokio (prioridad)</h2>
+<div class="grid">{priority_cards}</div>
+<h2 class="section">Otros destinos en Japón</h2>
+<div class="grid">{secondary_cards}</div>
+</div>
+<footer>Generado automáticamente · japan-fare-monitor</footer>
 </body></html>"""
 
 
@@ -249,7 +319,8 @@ def send_email(subject, report_md):
 # ── Main ─────────────────────────────────────────────────────────────────────
 def run():
     log("japan-fare-monitor (modo enlaces) iniciando...")
-    report_md = build_report()
+    rows = build_rows()
+    report_md = build_report(rows)
 
     fecha = date.today().isoformat()
     out_dir = os.path.join(_HERE, "..", "public", "japan-fares")
@@ -257,8 +328,8 @@ def run():
     os.makedirs(os.path.join(out_dir, "historico"), exist_ok=True)
 
     dates = list_historico_dates(out_dir, fecha)
-    html_index = render_full_html(report_md, fecha, render_tabs(dates, fecha, in_historico=False))
-    html_hist = render_full_html(report_md, fecha, render_tabs(dates, fecha, in_historico=True))
+    html_index = render_web_page(rows, render_tabs(dates, fecha, in_historico=False), fecha)
+    html_hist = render_web_page(rows, render_tabs(dates, fecha, in_historico=True), fecha)
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_index)
     with open(os.path.join(out_dir, "historico", f"{fecha}.html"), "w", encoding="utf-8") as f:
