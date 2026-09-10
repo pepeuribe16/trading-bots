@@ -45,4 +45,7 @@ jobs:
           # cuando se pega desde ciertos editores; eso rompe el header HTTP que
           # arma firebase-tools ("Cannot convert argument to a ByteString...").
           CLEAN_TOKEN=$(printf '%s' "$FIREBASE_TOKEN" | sed '1s/^\xef\xbb\xbf//' | tr -d '\r\n')
+          echo "::group::Proyectos disponibles para este token"
+          firebase projects:list --token "$CLEAN_TOKEN" || true
+          echo "::endgroup::"
           firebase deploy --only hosting --token "$CLEAN_TOKEN" --non-interactive
