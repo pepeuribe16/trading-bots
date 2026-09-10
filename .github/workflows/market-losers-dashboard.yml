@@ -6,6 +6,9 @@ on:
     - cron: "0 15 * * 1-5"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -21,6 +24,14 @@ jobs:
 
       - name: Ejecutar dashboard
         run: python market_losers_dashboard.py
+
+      - name: Commitear dashboard al repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f public/index.html public/historico
+          git diff --cached --quiet || git commit -m "chore: update market losers dashboard [skip ci]"
+          git push
 
       - name: Deploy a Firebase Hosting
         continue-on-error: true
