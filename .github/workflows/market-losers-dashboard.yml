@@ -1,9 +1,9 @@
 name: market-losers-dashboard
 
+# Desactivado: el dashboard de / lo publica ahora la rutina de Claude
+# "market-losers-dashboard" (versión detallada). Este workflow queda solo para
+# ejecución manual; no lo corras, porque reemplaza la versión detallada.
 on:
-  schedule:
-    # 9:00am hora México (CDT = UTC-6) → 15:00 UTC, lunes a viernes
-    - cron: "0 15 * * 1-5"
   workflow_dispatch:
 
 permissions:

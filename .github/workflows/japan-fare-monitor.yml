@@ -35,7 +35,17 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: update japan fare report [skip ci]"
           git push
 
+      # firebase deploy reemplaza el sitio completo con public/. La rutina de
+      # Claude market-losers-dashboard publica / y /historico/ directo en
+      # Firebase (no en el repo), así que primero traemos esas páginas del sitio
+      # en vivo para no pisarlas con la copia vieja del repo.
+      - name: Preservar páginas publicadas por rutinas de Claude
+        id: sync
+        continue-on-error: true
+        run: python scripts/sync_live_site.py
+
       - name: Deploy a Firebase Hosting
+        if: steps.sync.outcome == 'success'
         continue-on-error: true
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
