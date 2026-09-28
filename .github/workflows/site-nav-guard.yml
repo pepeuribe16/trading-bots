@@ -1,0 +1,46 @@
+name: site-nav-guard
+
+# La rutina de Claude market-losers-dashboard publica / y /historico/ directo en
+# Firebase (~15:13-15:40 UTC) con su propia barra de navegación. Este workflow
+# revisa varias veces después de esa hora que todas las páginas tengan los 4
+# botones (Caídas, Auto BOT, Historial, Japan Fares) y solo vuelve a publicar
+# el sitio si en vivo faltaba alguno.
+on:
+  schedule:
+    - cron: "41 15 * * *"
+    - cron: "13 16 * * *"
+    - cron: "47 16 * * *"
+    - cron: "23 17 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sincronizar sitio en vivo y revisar botones
+        id: sync
+        run: python scripts/sync_live_site.py
+
+      - name: Deploy a Firebase Hosting
+        # A mano (workflow_dispatch) siempre publica.
+        if: steps.sync.outputs.needs_deploy == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          npm install -g firebase-tools --silent
+          # Ver japan-fare-monitor.yml: limpia BOM y saltos de línea del secreto.
+          CLEAN_TOKEN=$(printf '%s' "$FIREBASE_TOKEN" | sed '1s/^\xef\xbb\xbf//' | tr -d '\r\n')
+          firebase deploy --only hosting --token "$CLEAN_TOKEN" --non-interactive

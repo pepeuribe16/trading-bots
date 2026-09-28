@@ -18,8 +18,11 @@ import sys
 import time
 import urllib.request
 
+from site_nav import ensure_nav
+
 SITE = "https://market-dashboard-gga.web.app"
 PUBLIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
+SYNCED = set()  # páginas traídas del sitio en vivo
 
 
 def fetch(path):
@@ -35,31 +38,38 @@ def fetch(path):
         return None
 
 
-def add_japan_link(html):
-    """Agrega el botón "Japan Fares" a la barra de navegación si no lo trae.
-
-    Copia los atributos del botón "Auto BOT" (siempre inactivo en estas páginas)
-    y lo inserta después de "Historial".
-    """
-    if b'href="/japan-fares"' in html:
-        return html
-    portfolio = re.search(rb'<a href="/portfolio"([^>]*)>', html)
-    historico = re.search(rb'<a href="/historico"[^>]*>.*?</a>', html, re.S)
-    if not (portfolio and historico):
-        return html
-    link = (b'\n    <a href="/japan-fares"' + portfolio.group(1) + b'>'
-            + "✈️ Japan Fares".encode() + b'</a>')
-    return html[:historico.end()] + link + html[historico.end():]
-
-
 def save(path, data):
     dest = os.path.join(PUBLIC, path.lstrip("/"))
     os.makedirs(os.path.dirname(dest), exist_ok=True)
-    if path.endswith(".html"):
-        data = add_japan_link(data)
     with open(dest, "wb") as f:
         f.write(data)
+    SYNCED.add(path)
     print(f"  ✓ {path} ({len(data)} bytes)")
+
+
+def fix_nav_everywhere():
+    """Agrega los botones faltantes en todas las páginas de public/.
+
+    Devuelve las páginas traídas del sitio en vivo a las que les faltaba algo:
+    si hay alguna, el sitio publicado necesita un deploy.
+    """
+    live_missing = []
+    for folder, _, files in os.walk(PUBLIC):
+        for name in files:
+            if not name.endswith(".html"):
+                continue
+            full = os.path.join(folder, name)
+            path = "/" + os.path.relpath(full, PUBLIC).replace(os.sep, "/")
+            with open(full, "rb") as f:
+                html = f.read()
+            fixed = ensure_nav(html, path)
+            if fixed != html:
+                with open(full, "wb") as f:
+                    f.write(fixed)
+                print(f"  + botones agregados en {path}")
+                if path in SYNCED:
+                    live_missing.append(path)
+    return live_missing
 
 
 def main():
@@ -89,6 +99,12 @@ def main():
         # Sin índice en vivo, /historico caería en el rewrite "**" y mostraría la
         # página principal; generamos uno con los reportes que sí hay en public/.
         build_historico_index()
+
+    live_missing = fix_nav_everywhere()
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:
+        with open(out, "a") as f:
+            f.write(f"needs_deploy={'true' if live_missing else 'false'}\n")
 
 
 def build_historico_index():

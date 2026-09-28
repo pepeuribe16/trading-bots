@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+# Mismo grupo que site-nav-guard: nunca dos deploys a Firebase a la vez.
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
 jobs:
   run:
     runs-on: ubuntu-latest
