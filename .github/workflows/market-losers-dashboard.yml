@@ -2,7 +2,7 @@ name: market-losers-dashboard
 
 # Desactivado: el dashboard de / lo publica ahora la rutina de Claude
 # "market-losers-dashboard" (versión detallada). Este workflow queda solo para
-# ejecución manual; no lo corras, porque reemplaza la versión detallada.
+# ejecución manual y ya no publica en Firebase.
 on:
   workflow_dispatch:
 
@@ -33,13 +33,5 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: update market losers dashboard [skip ci]"
           git push
 
-      - name: Deploy a Firebase Hosting
-        continue-on-error: true
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: |
-          npm install -g firebase-tools --silent
-          # Ver .github/workflows/japan-fare-monitor.yml para el porque de estas
-          # dos correcciones (flag --site invalido + BOM en el secreto).
-          CLEAN_TOKEN=$(printf '%s' "$FIREBASE_TOKEN" | sed '1s/^\xef\xbb\xbf//' | tr -d '\r\n')
-          firebase deploy --only hosting --token "$CLEAN_TOKEN" --non-interactive
+      # Sin paso de deploy a Firebase a propósito: / lo publica la rutina de
+      # Claude. Si se corre a mano, este workflow solo actualiza el repo.
