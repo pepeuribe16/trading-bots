@@ -24,12 +24,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Sin variables SMTP a propósito: el script omite el correo y solo genera
+      # las páginas. Para reactivar el correo, volver a pasar los secretos
+      # SMTP_HOST, SMTP_PORT, SMTP_USER y SMTP_PASSWORD como env de este paso.
       - name: Ejecutar Japan Fare Monitor
-        env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: python JapanFareBot/japan_fare_monitor.py
 
       - name: Commitear reporte al repo
