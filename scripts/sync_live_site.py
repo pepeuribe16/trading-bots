@@ -66,6 +66,50 @@ def main():
             # así que ese sí puede ser idéntico al index sin ser un rewrite.
             if is_real(data) or (data and d == dates[-1]):
                 save(path, data)
+    else:
+        # Sin índice en vivo, /historico caería en el rewrite "**" y mostraría la
+        # página principal; generamos uno con los reportes que sí hay en public/.
+        build_historico_index()
+
+
+def build_historico_index():
+    folder = os.path.join(PUBLIC, "historico")
+    dates = sorted(
+        (f[:-5] for f in os.listdir(folder) if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.html", f)),
+        reverse=True,
+    ) if os.path.isdir(folder) else []
+    items = "".join(
+        f'<a href="/historico/{d}.html" style="display:flex;justify-content:space-between;'
+        f'padding:16px 24px;text-decoration:none;border-bottom:1px solid #21262d;">'
+        f'<span style="color:#58a6ff;font-weight:600;">{d}</span>'
+        f'<span style="color:#3fb950;font-size:12px;">Ver reporte ›</span></a>'
+        for d in dates
+    ) or '<p style="padding:32px;text-align:center;color:#8b949e">No hay reportes disponibles.</p>'
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Histórico — Market Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;background:#0A0C10;color:#c9d1d9;font-family:'DM Mono',monospace;">
+<div style="position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;">
+  <span style="font-size:11px;letter-spacing:2px;color:#6B7A99;text-transform:uppercase;">Market Intelligence</span>
+  <div style="display:flex;gap:8px;">
+    <a href="/" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:rgba(255,255,255,0.07);color:#6B7A99;">📉 Caídas</a>
+    <a href="/portfolio" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:rgba(255,255,255,0.07);color:#6B7A99;">🤖 Auto BOT</a>
+    <a href="/historico" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:#FFB800;color:#000;">📅 Historial</a>
+  </div>
+</div>
+<div style="max-width:720px;margin:0 auto;padding:96px 16px 32px;">
+  <h1 style="font-family:'Syne',sans-serif;font-size:26px;color:#f0f6fc;text-align:center;">📅 Histórico de Reportes</h1>
+  <p style="text-align:center;color:#8b949e;font-size:12px;margin-bottom:32px;letter-spacing:1px;text-transform:uppercase;">{len(dates)} reportes disponibles</p>
+  <div style="border:1px solid #30363d;border-radius:12px;overflow:hidden;background:#0d1117;">{items}</div>
+</div>
+</body>
+</html>"""
+    save("/historico/index.html", html.encode())
 
 
 if __name__ == "__main__":
