@@ -259,6 +259,24 @@ def render_card(row):
     </div>"""
 
 
+# Misma barra de navegación que el resto de market-dashboard-gga.web.app.
+_NAV_BTN = ("text-decoration:none;padding:7px 16px;border-radius:7px;font-size:12px;"
+            "font-weight:700;white-space:nowrap;")
+_NAV_OFF = _NAV_BTN + "background:rgba(255,255,255,0.07);color:#6B7A99;"
+SITE_NAV = f"""<div style="position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);
+backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;
+justify-content:space-between;gap:12px;padding:10px 24px;overflow-x:auto;">
+  <span style="font-family:monospace;font-size:11px;letter-spacing:2px;color:#6B7A99;text-transform:uppercase;white-space:nowrap;">Market Intelligence</span>
+  <div style="display:flex;gap:8px;">
+    <a href="/" style="{_NAV_OFF}">📉 Caídas</a>
+    <a href="/portfolio" style="{_NAV_OFF}">🤖 Auto BOT</a>
+    <a href="/historico" style="{_NAV_OFF}">📅 Historial</a>
+    <a href="/japan-fares/" style="{_NAV_BTN}background:#4D8BFF;color:#fff;">✈️ Japan Fares</a>
+  </div>
+</div>
+<div style="height:56px;"></div>"""
+
+
 def render_web_page(rows, tabs_html, generated_at):
     priority_cards = "".join(render_card(r) for r in rows if r["priority"] == 1)
     secondary_cards = "".join(render_card(r) for r in rows if r["priority"] == 2)
@@ -267,6 +285,7 @@ def render_web_page(rows, tabs_html, generated_at):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Enlaces GDL → Japón · {generated_at}</title>
 <style>{WEB_CSS}</style></head><body>
+{SITE_NAV}
 <div class="wrap">
 <h1>✈️ GDL → Japón</h1>
 <p class="subtitle">Enlaces de búsqueda para viajes de 13-15 días · noviembre-diciembre 2026</p>

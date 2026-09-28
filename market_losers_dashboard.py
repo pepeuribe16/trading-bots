@@ -233,6 +233,7 @@ footer{{position:relative;z-index:10;text-align:center;padding:20px;
     <a href="/" class="active">📉 Caídas</a>
     <a href="/portfolio" class="inactive">🤖 Auto BOT</a>
     <a href="/historico" class="inactive">📅 Historial</a>
+    <a href="/japan-fares" class="inactive">✈️ Japan Fares</a>
   </div>
 </nav>
 

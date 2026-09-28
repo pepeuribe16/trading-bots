@@ -35,9 +35,28 @@ def fetch(path):
         return None
 
 
+def add_japan_link(html):
+    """Agrega el botón "Japan Fares" a la barra de navegación si no lo trae.
+
+    Copia los atributos del botón "Auto BOT" (siempre inactivo en estas páginas)
+    y lo inserta después de "Historial".
+    """
+    if b'href="/japan-fares"' in html:
+        return html
+    portfolio = re.search(rb'<a href="/portfolio"([^>]*)>', html)
+    historico = re.search(rb'<a href="/historico"[^>]*>.*?</a>', html, re.S)
+    if not (portfolio and historico):
+        return html
+    link = (b'\n    <a href="/japan-fares"' + portfolio.group(1) + b'>'
+            + "✈️ Japan Fares".encode() + b'</a>')
+    return html[:historico.end()] + link + html[historico.end():]
+
+
 def save(path, data):
     dest = os.path.join(PUBLIC, path.lstrip("/"))
     os.makedirs(os.path.dirname(dest), exist_ok=True)
+    if path.endswith(".html"):
+        data = add_japan_link(data)
     with open(dest, "wb") as f:
         f.write(data)
     print(f"  ✓ {path} ({len(data)} bytes)")
@@ -100,6 +119,7 @@ def build_historico_index():
     <a href="/" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:rgba(255,255,255,0.07);color:#6B7A99;">📉 Caídas</a>
     <a href="/portfolio" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:rgba(255,255,255,0.07);color:#6B7A99;">🤖 Auto BOT</a>
     <a href="/historico" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:#FFB800;color:#000;">📅 Historial</a>
+    <a href="/japan-fares" style="text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:rgba(255,255,255,0.07);color:#6B7A99;">✈️ Japan Fares</a>
   </div>
 </div>
 <div style="max-width:720px;margin:0 auto;padding:96px 16px 32px;">
