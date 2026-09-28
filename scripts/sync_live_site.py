@@ -62,7 +62,9 @@ def main():
         for d in dates:
             path = f"/historico/{d.decode()}.html"
             data = fetch(path)
-            if is_real(data):
+            # La rutina publica el reporte más reciente también como /index.html,
+            # así que ese sí puede ser idéntico al index sin ser un rewrite.
+            if is_real(data) or (data and d == dates[-1]):
                 save(path, data)
 
 
