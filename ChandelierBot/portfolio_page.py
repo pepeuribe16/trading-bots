@@ -148,6 +148,12 @@ def _stop_bar(p):
     return dist, width, color, estado
 
 
+def _stop_text(dist, estado):
+    if dist < 0:
+        return f"{-dist:.1f}% bajo el stop · venta pendiente"
+    return f"{dist:.1f}% sobre el stop · {estado}"
+
+
 def _position_cards(positions):
     if not positions:
         return ('<div class="empty">Sin posiciones abiertas. El bot busca breakouts '
@@ -172,7 +178,7 @@ def _position_cards(positions):
         <div><span>ATR</span>{atr}</div>
       </div>
       <div class="bar"><div style="width:{width:.0f}%;background:{color}"></div></div>
-      <div class="bar-label">{dist:.1f}% sobre el stop · {estado}</div>
+      <div class="bar-label">{_stop_text(dist, estado)}</div>
     </div>"""
     return f'<div class="pos-wrap">{cards}</div>'
 
