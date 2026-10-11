@@ -237,9 +237,11 @@ def run_scan():
 
             if price <= stops[sym]:
                 log(f"  → CHANDELIER STOP HIT — selling {sym}")
-                place_sell(sym, qty)
-                stops.pop(sym, None)
-                sells_done += 1
+                # Si Alpaca rechaza la venta (p. ej. acciones ya comprometidas en otra orden),
+                # se conserva el stop para reintentar en la siguiente ejecución.
+                if place_sell(sym, qty):
+                    stops.pop(sym, None)
+                    sells_done += 1
 
     save_stops(stops)
 
