@@ -6,54 +6,93 @@
 <title>Auto BOT · Chandelier Exit</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
-:root {
-  --bg:#0A0C10; --surface:#111520; --surface2:#181D2B;
-  --border:rgba(255,255,255,0.07); --text:#E8ECF4; --muted:#6B7A99;
-  --green:#00E599; --red:#FF3B5C; --yellow:#FFB800; --blue:#4D8BFF;
-}
+:root{--bg:#0A0C10;--surface:#111520;--surface2:#181D2B;--border:rgba(255,255,255,0.07);
+  --text:#E8ECF4;--muted:#6B7A99;--green:#00E599;--red:#FF3B5C;--blue:#4D8BFF;--yellow:#FFB800}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-body::before{content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(77,139,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(77,139,255,0.03) 1px,transparent 1px);
-  background-size:40px 40px;pointer-events:none;z-index:0}
-.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);
-  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;padding:10px 24px}
-.nav-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-size:40px 40px;
+  background-image:linear-gradient(rgba(77,139,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(77,139,255,0.03) 1px,transparent 1px)}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;overflow-x:auto}
+.nav-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
 .nav-links{display:flex;gap:8px}
-.nav-links a{text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;
-  font-size:12px;font-weight:700;letter-spacing:0.5px}
+.nav-links a{text-decoration:none;padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap}
 .nav-links a.active{background:var(--blue);color:#fff}
 .nav-links a.inactive{background:rgba(255,255,255,0.07);color:var(--muted)}
-.wrap{position:relative;z-index:10;padding:72px 24px 60px;max-width:860px;margin:0 auto}
-.eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;
-  color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.wrap{position:relative;z-index:10;padding:76px 20px 48px;max-width:960px;margin:0 auto}
+.eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--blue);
+  display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .pulse{width:6px;height:6px;background:var(--blue);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
-h1{font-family:'DM Serif Display',serif;font-size:clamp(28px,6vw,44px);line-height:1.1;color:#fff;margin-bottom:4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+h1{font-family:'DM Serif Display',serif;font-size:clamp(28px,6vw,42px);color:#fff;line-height:1.1}
 h1 span{color:var(--blue);font-style:italic}
-.subtitle{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:28px}
-.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
-.metric{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
-.metric-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-.metric-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:#fff}
+.subtitle{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin:6px 0 22px}
+.hero{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-bottom:14px;
+  display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+.hero-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+.hero-val{font-family:'DM Mono',monospace;font-size:clamp(34px,8vw,48px);color:#fff;margin:4px 0}
+.hero-pl{font-family:'DM Mono',monospace;font-size:16px}
+.hero-since{margin-top:10px;font-size:13px;color:var(--muted)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.kv:last-child{border-bottom:none}
+.kv span{color:var(--muted)} .kv b{font-family:'DM Mono',monospace;font-weight:500}
+.note{margin-top:8px;font-size:12px;color:var(--yellow)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.tile-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.tile-val{font-family:'DM Mono',monospace;font-size:26px;color:#fff}
+.tile-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.winbar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin-top:10px;background:var(--surface2)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px}
-.card-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;
-  color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);
+  margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .card-label::before{content:'';width:14px;height:2px;background:var(--blue);border-radius:2px}
-tbody tr{border-bottom:1px solid rgba(255,255,255,0.05)}
-tbody tr:last-child{border-bottom:none}
-tbody td{padding:10px 10px;vertical-align:middle}
-.sched-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;margin-bottom:8px}
-.sched-time{font-family:'DM Mono',monospace;font-size:12px;color:var(--blue);min-width:80px}
-.sched-desc{font-size:12px;color:var(--muted)}
-footer{position:relative;z-index:10;text-align:center;padding:20px;
-  font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
-  border-top:1px solid var(--border);margin-top:20px}
+.chart{position:relative;overflow-x:auto} .chart svg{width:100%;min-width:520px;height:auto;display:block}
+.grid{stroke:rgba(255,255,255,0.06);stroke-width:1}
+.base{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4}
+.axis{fill:var(--muted);font-family:'DM Mono',monospace;font-size:11px}
+.cross{stroke:rgba(255,255,255,0.35);stroke-width:1}
+.mark{stroke:var(--surface);stroke-width:2;cursor:pointer}
+.tip{position:absolute;top:0;pointer-events:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap;transform:translateX(-50%)}
+.tip small{display:block;color:var(--muted);font-size:10px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;vertical-align:middle;margin-right:6px}
+.legend .ln{width:16px;height:2px;background:var(--blue)}
+.legend .dash{width:16px;border-top:1px dashed var(--muted)}
+.pos-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.pos{background:var(--surface2);border-radius:12px;padding:14px 16px}
+.pos-head{display:flex;justify-content:space-between;align-items:baseline}
+.sym{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:#fff}
+.pnl{font-family:'DM Mono',monospace;font-size:16px}
+.pos-sub{font-size:12px;color:var(--muted);margin:2px 0 10px}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-family:'DM Mono',monospace;font-size:13px}
+.pos-grid span{display:block;font-family:'Syne',sans-serif;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);margin-top:12px;overflow:hidden}
+.bar div{height:100%;border-radius:3px}
+.bar-label{font-size:11px;color:var(--muted);margin-top:5px}
+.timeline{position:relative;padding-left:4px}
+.ev{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.ev:not(:last-child)::before{content:'';position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--border)}
+.ev-dot{flex:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--bg)}
+.ev-top{display:flex;justify-content:space-between;gap:10px;font-family:'DM Mono',monospace;font-size:14px}
+.ev-top b{color:#fff;font-weight:500}
+.ev-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.ev-body{flex:1;min-width:0}
+.ev-more{font-size:12px;color:var(--muted)}
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.strategy{font-size:13px;color:var(--muted);line-height:1.8}
+.strategy b{color:var(--text)}
+footer{position:relative;z-index:10;text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:11px;
+  color:var(--muted);border-top:1px solid var(--border)}
+@media (max-width:720px){
+  .hero{grid-template-columns:1fr} .tiles{grid-template-columns:repeat(2,1fr)}
+  .wrap{padding:72px 16px 40px} .nav{padding:10px 16px}
+}
 </style>
 </head>
 <body>
-
 <nav class="nav">
   <span class="nav-label">Market Intelligence</span>
   <div class="nav-links">
@@ -67,134 +106,352 @@ footer{position:relative;z-index:10;text-align:center;padding:20px;
 <div class="wrap">
   <div class="eyebrow"><div class="pulse"></div> Chandelier Exit ATR · Paper Trading</div>
   <h1>Auto <span>BOT</span></h1>
-  <div class="subtitle">📅 10 Oct 2026 · 01:17 CT &nbsp;·&nbsp; Cuenta Paper PA3005WTJRYE</div>
+  <div class="subtitle">Actualizado 11 Oct 2026 · 18:18 CT · Cuenta paper PA3005WTJRYE</div>
 
-  <div class="metrics">
-    <div class="metric">
-      <div class="metric-label">Capital Inicial</div>
-      <div class="metric-val">$50,000</div>
+  <div class="hero">
+    <div>
+      <div class="hero-label">Saldo actual de la cuenta</div>
+      <div class="hero-val">$52,335</div>
+      <div class="hero-pl" style="color:#00E599">+$2,335 · +4.67% desde el inicio</div>
+      <div class="hero-since">📅 Operando desde el 4 jun 2026 · 129 días</div>
     </div>
-    <div class="metric">
-      <div class="metric-label">Equity Actual</div>
-      <div class="metric-val">$52,339</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Ganancia / Pérdida</div>
-      <div class="metric-val" style="color:#00E599">+$2,339</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Retorno Total</div>
-      <div class="metric-val" style="color:#00E599">+4.68%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Efectivo</div>
-      <div class="metric-val">$-1,006</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Posiciones</div>
-      <div class="metric-val">6 / 8</div>
+    <div>
+      <div class="kv"><span>Capital inicial</span><b>$50,000</b></div>
+      <div class="kv"><span>Invertido en acciones</span><b>$53,341</b></div>
+      <div class="kv"><span>Efectivo</span><b style="color:#FF3B5C">−$1,006</b></div>
+      <div class="kv"><span>Posiciones abiertas</span><b>6 / 8</b></div>
+      <div class="note">⚠️ Efectivo negativo: la cuenta está usando margen.</div>
     </div>
   </div>
 
-  
-        <div class="card">
-          <div class="card-label">Posiciones abiertas (6/8)</div>
-          <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.07);">
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">Símbolo</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">Qty</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">Entrada</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">Precio</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">P&L</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">Stop</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">ATR</th>
-                <th style="text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:#6B7A99;font-weight:600;text-transform:uppercase">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-            <tr>
-              <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">AMD</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">15</td>
-              <td style="font-family:'DM Mono',monospace">$634.39</td>
-              <td style="font-family:'DM Mono',monospace">$608.49</td>
-              <td style="font-family:'DM Mono',monospace;color:#FF3B5C;font-weight:700">-4.08%</td>
-              <td style="font-family:'DM Mono',monospace;color:#FFB800">$602.67</td>
-              <td style="font-family:'DM Mono',monospace;color:#4D8BFF">$0.00</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">$9,127</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">CRWD</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">25</td>
-              <td style="font-family:'DM Mono',monospace">$238.70</td>
-              <td style="font-family:'DM Mono',monospace">$275.53</td>
-              <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+15.43%</td>
-              <td style="font-family:'DM Mono',monospace;color:#FFB800">$226.76</td>
-              <td style="font-family:'DM Mono',monospace;color:#4D8BFF">$0.00</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">$6,888</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">META</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">14</td>
-              <td style="font-family:'DM Mono',monospace">$648.47</td>
-              <td style="font-family:'DM Mono',monospace">$717.68</td>
-              <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+10.67%</td>
-              <td style="font-family:'DM Mono',monospace;color:#FFB800">$616.05</td>
-              <td style="font-family:'DM Mono',monospace;color:#4D8BFF">$0.00</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">$10,048</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">SNOW</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">22</td>
-              <td style="font-family:'DM Mono',monospace">$333.25</td>
-              <td style="font-family:'DM Mono',monospace">$368.90</td>
-              <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+10.70%</td>
-              <td style="font-family:'DM Mono',monospace;color:#FFB800">$295.46</td>
-              <td style="font-family:'DM Mono',monospace;color:#4D8BFF">$0.00</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">$8,116</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">SNPS</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">22</td>
-              <td style="font-family:'DM Mono',monospace">$467.85</td>
-              <td style="font-family:'DM Mono',monospace">$509.52</td>
-              <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+8.91%</td>
-              <td style="font-family:'DM Mono',monospace;color:#FFB800">$444.46</td>
-              <td style="font-family:'DM Mono',monospace;color:#4D8BFF">$0.00</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">$11,209</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">ZS</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">34</td>
-              <td style="font-family:'DM Mono',monospace">$192.65</td>
-              <td style="font-family:'DM Mono',monospace">$234.01</td>
-              <td style="font-family:'DM Mono',monospace;color:#00E599;font-weight:700">+21.47%</td>
-              <td style="font-family:'DM Mono',monospace;color:#FFB800">$183.02</td>
-              <td style="font-family:'DM Mono',monospace;color:#4D8BFF">$0.00</td>
-              <td style="font-family:'DM Mono',monospace;color:#6B7A99">$7,956</td>
-            </tr></tbody>
-          </table>
-          </div>
-        </div>
+  <div class="tiles">
+    <div class="tile"><div class="tile-label">Operaciones cerradas</div>
+      <div class="tile-val">49</div>
+      <div class="tile-sub">+ 6 abiertas ahora</div></div>
+    <div class="tile"><div class="tile-label">Ganadoras</div>
+      <div class="tile-val" style="color:#00E599">▲ 16</div>
+      <div class="tile-sub">+$5,095</div></div>
+    <div class="tile"><div class="tile-label">Perdedoras</div>
+      <div class="tile-val" style="color:#FF3B5C">▼ 33</div>
+      <div class="tile-sub">−$7,362</div></div>
+    <div class="tile"><div class="tile-label">Tasa de acierto</div>
+      <div class="tile-val">33%</div>
+      <div class="winbar" title="16 ganadoras / 33 perdedoras">
+        <div style="flex:16;background:#00E599"></div>
+        <div style="flex:33;background:#FF3B5C"></div></div></div>
+  </div>
 
   <div class="card">
-    <div class="card-label">Estrategia</div>
-    <div style="font-family:'DM Serif Display',serif;font-size:20px;color:#fff;margin-bottom:10px;">
-      Chandelier Exit ATR Trailing Stop
+    <div class="card-label">Línea de tiempo del saldo</div>
+    
+<div class="chart" id="eqchart" data-l="56" data-r="666" data-w="680">
+  <svg viewBox="0 0 680 260" role="img" aria-label="Evolución del saldo de la cuenta desde el inicio">
+    <defs><linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4D8BFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#4D8BFF" stop-opacity="0"/></linearGradient></defs>
+    <line x1="56" x2="666" y1="147.8" y2="147.8" class="grid"/><text x="48" y="151.8" class="axis" text-anchor="end">$50k</text><line x1="56" x2="666" y1="47.4" y2="47.4" class="grid"/><text x="48" y="51.4" class="axis" text-anchor="end">$52k</text><line x1="56" x2="666" y1="147.8" y2="147.8" class="base"/><text x="666" y="141.8" class="axis" text-anchor="end">capital inicial $50,000</text><text x="56.0" y="250" class="axis" text-anchor="start">4 jun</text><text x="201.2" y="250" class="axis" text-anchor="middle">11 jun</text><text x="346.5" y="250" class="axis" text-anchor="middle">18 jun</text><text x="520.8" y="250" class="axis" text-anchor="middle">27 jun</text><text x="666.0" y="250" class="axis" text-anchor="end">11 oct</text>
+    <path d="M56.0,147.8 L85.0,147.8 L114.1,147.8 L143.1,147.8 L172.2,147.8 L201.2,147.8 L230.3,147.8 L259.3,147.8 L288.4,147.8 L317.4,147.8 L346.5,147.8 L375.5,147.8 L404.6,147.8 L433.6,147.8 L462.7,147.8 L491.7,147.8 L520.8,147.8 L549.8,147.8 L578.9,147.8 L607.9,165.6 L637.0,213.4 L666.0,30.6 L666.0,228 L56.0,228 Z" fill="url(#eqfill)"/>
+    <path d="M56.0,147.8 L85.0,147.8 L114.1,147.8 L143.1,147.8 L172.2,147.8 L201.2,147.8 L230.3,147.8 L259.3,147.8 L288.4,147.8 L317.4,147.8 L346.5,147.8 L375.5,147.8 L404.6,147.8 L433.6,147.8 L462.7,147.8 L491.7,147.8 L520.8,147.8 L549.8,147.8 L578.9,147.8 L607.9,165.6 L637.0,213.4 L666.0,30.6" fill="none" stroke="#4D8BFF" stroke-width="2" stroke-linejoin="round"/>
+    <polygon points="607.9,172.6 601.9,161.6 613.9,161.6" fill="#FF3B5C" class="mark"><title>LRCX · −$557 (−13.72%) · 2 jul 2026</title></polygon><polygon points="607.9,172.6 601.9,161.6 613.9,161.6" fill="#FF3B5C" class="mark"><title>LRCX · −$206 (−12.79%) · 2 jul 2026</title></polygon><polygon points="607.9,172.6 601.9,161.6 613.9,161.6" fill="#FF3B5C" class="mark"><title>MRVL · −$604 (−11.01%) · 2 jul 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>ZS · +$167 (+2.17%) · 6 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>ISRG · −$79 (−0.81%) · 7 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>FAST · −$428 (−4.26%) · 9 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>MNST · −$671 (−3.72%) · 21 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>MNST · −$409 (−3.35%) · 21 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>DDOG · −$565 (−7.03%) · 22 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>DDOG · −$78 (−7.31%) · 22 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>META · −$490 (−5.26%) · 22 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>COIN · −$387 (−6.20%) · 23 jul 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>MNST · −$179 (−4.81%) · 3 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>MNST · −$259 (−4.81%) · 3 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>CTAS · −$111 (−1.11%) · 4 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>AMZN · −$450 (−5.04%) · 13 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>AMZN · −$14 (−5.03%) · 13 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>AMZN · −$225 (−2.35%) · 17 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>PCAR · −$31 (−0.79%) · 17 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>PCAR · −$33 (−1.38%) · 17 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>PCAR · −$38 (−1.38%) · 17 ago 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>SNOW · −$140 (−1.96%) · 2 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>SNOW · −$15 (−2.33%) · 2 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>DASH · −$119 (−1.33%) · 4 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>DASH · −$30 (−2.72%) · 4 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>DXCM · +$552 (+14.01%) · 8 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>WDAY · +$1,191 (+22.98%) · 8 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>DXCM · +$712 (+14.01%) · 8 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>WDAY · +$281 (+23.03%) · 8 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>DXCM · +$11 (+14.01%) · 8 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>WDAY · +$35 (+23.03%) · 8 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>MSFT · +$111 (+1.21%) · 9 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>COIN · −$126 (−4.93%) · 10 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>QCOM · −$141 (−1.50%) · 10 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>COIN · −$210 (−5.71%) · 10 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>COIN · −$167 (−6.04%) · 10 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>QCOM · −$271 (−2.74%) · 14 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>COIN · −$104 (−2.09%) · 16 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>GOOGL · −$21 (−0.23%) · 17 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>TSLA · +$188 (+5.77%) · 23 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>TSLA · +$133 (+5.25%) · 23 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>TSLA · +$40 (+5.53%) · 23 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>TSLA · +$143 (+5.67%) · 23 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>QCOM · −$20 (−2.01%) · 23 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>SMCI · +$70 (+1.03%) · 23 sep 2026</title></polygon><polygon points="666.0,37.6 660.0,26.6 672.0,26.6" fill="#FF3B5C" class="mark"><title>QCOM · −$183 (−1.81%) · 23 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>TEAM · +$881 (+71.98%) · 28 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>TEAM · +$368 (+72.13%) · 28 sep 2026</title></polygon><polygon points="666.0,23.6 660.0,34.6 672.0,34.6" fill="#00E599" class="mark"><title>GOOGL · +$213 (+2.21%) · 30 sep 2026</title></polygon>
+    <circle cx="666.0" cy="30.6" r="5" fill="#4D8BFF" stroke="var(--surface)" stroke-width="2"/>
+    <line id="eqx" y1="16" y2="228" class="cross" style="display:none"/>
+    <circle id="eqdot" r="5" fill="#4D8BFF" stroke="var(--surface)" stroke-width="2" style="display:none"/>
+  </svg>
+  <div id="eqtip" class="tip" style="display:none"></div>
+  <script type="application/json" id="eqdata">[["2026-06-04", 50000.0], ["2026-06-05", 50000.0], ["2026-06-06", 50000.0], ["2026-06-09", 50000.0], ["2026-06-10", 50000.0], ["2026-06-11", 50000.0], ["2026-06-12", 50000.0], ["2026-06-13", 50000.0], ["2026-06-16", 50000.0], ["2026-06-17", 50000.0], ["2026-06-18", 50000.0], ["2026-06-19", 50000.0], ["2026-06-23", 50000.0], ["2026-06-24", 50000.0], ["2026-06-25", 50000.0], ["2026-06-26", 50000.0], ["2026-06-27", 50000.0], ["2026-06-30", 50000.0], ["2026-07-01", 50000.0], ["2026-07-02", 49644.82], ["2026-07-03", 48691.8], ["2026-10-11", 52335.18]]</script>
+</div>
+<div class="legend"><span><i class="ln"></i>Saldo de la cuenta</span>
+  <span><b style="color:#00E599">▲</b> venta con ganancia</span>
+  <span><b style="color:#FF3B5C">▼</b> venta con pérdida</span>
+  <span><i class="dash"></i>capital inicial</span></div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="tile-label">Ganancia realizada</div>
+      <div class="tile-val" style="font-size:20px;color:#FF3B5C">−$2,267</div>
+      <div class="tile-sub">de operaciones cerradas</div></div>
+    <div class="tile"><div class="tile-label">Ganancia no realizada</div>
+      <div class="tile-val" style="font-size:20px;color:#00E599">+$4,605</div>
+      <div class="tile-sub">de posiciones abiertas</div></div>
+    <div class="tile"><div class="tile-label">Saldo máximo</div>
+      <div class="tile-val" style="font-size:20px">$52,335</div>
+      <div class="tile-sub">hoy +0.0% vs. máximo</div></div>
+    <div class="tile"><div class="tile-label">Días operando</div>
+      <div class="tile-val" style="font-size:20px">129</div>
+      <div class="tile-sub">desde 4 jun</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Posiciones abiertas · ordenadas por cercanía al stop</div>
+    <div class="pos-wrap">
+    <div class="pos">
+      <div class="pos-head"><span class="sym">AMD</span>
+        <span class="pnl" style="color:#FF3B5C">−4.14%</span></div>
+      <div class="pos-sub">15 acciones · $9,122
+        <span style="color:#FF3B5C">(−$394)</span></div>
+      <div class="pos-grid">
+        <div><span>Entrada</span>$634.39</div>
+        <div><span>Precio</span>$608.10</div>
+        <div><span>Stop</span>$602.67</div>
+        <div><span>ATR</span>$21.83</div>
+      </div>
+      <div class="bar"><div style="width:6%;background:#FF3B5C"></div></div>
+      <div class="bar-label">0.9% sobre el stop · muy cerca del stop</div>
     </div>
-    <div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:16px;">
-      Breakout de <b style="color:var(--text)">20 días</b> con confirmación de volumen
-      (<b style="color:var(--text)">≥ 1.5×</b> promedio) y filtro de tendencia
-      (<b style="color:var(--text)">MA50</b>). Stop dinámico: máximo desde entrada
-      menos <b style="color:var(--text)">2.5 × ATR(14)</b> — solo sube.
-      Riesgo máximo <b style="color:var(--text)">2%</b> del portafolio por operación.
+    <div class="pos">
+      <div class="pos-head"><span class="sym">SNPS</span>
+        <span class="pnl" style="color:#00E599">+9.01%</span></div>
+      <div class="pos-sub">22 acciones · $11,220
+        <span style="color:#00E599">(+$927)</span></div>
+      <div class="pos-grid">
+        <div><span>Entrada</span>$467.85</div>
+        <div><span>Precio</span>$509.99</div>
+        <div><span>Stop</span>$444.46</div>
+        <div><span>ATR</span>—</div>
+      </div>
+      <div class="bar"><div style="width:86%;background:#00E599"></div></div>
+      <div class="bar-label">12.8% sobre el stop · con margen</div>
     </div>
-    <div class="sched-row"><span class="sched-time">9:35am CT</span><span class="sched-desc">Escanea breakouts + revisa stops (apertura)</span></div>
-    <div class="sched-row"><span class="sched-time">3:45pm CT</span><span class="sched-desc">Revisión antes del cierre + actualiza esta página</span></div>
+    <div class="pos">
+      <div class="pos-head"><span class="sym">META</span>
+        <span class="pnl" style="color:#00E599">+10.83%</span></div>
+      <div class="pos-sub">14 acciones · $10,061
+        <span style="color:#00E599">(+$983)</span></div>
+      <div class="pos-grid">
+        <div><span>Entrada</span>$648.47</div>
+        <div><span>Precio</span>$718.67</div>
+        <div><span>Stop</span>$616.05</div>
+        <div><span>ATR</span>$21.78</div>
+      </div>
+      <div class="bar"><div style="width:95%;background:#00E599"></div></div>
+      <div class="bar-label">14.3% sobre el stop · con margen</div>
+    </div>
+    <div class="pos">
+      <div class="pos-head"><span class="sym">CRWD</span>
+        <span class="pnl" style="color:#00E599">+15.22%</span></div>
+      <div class="pos-sub">25 acciones · $6,876
+        <span style="color:#00E599">(+$909)</span></div>
+      <div class="pos-grid">
+        <div><span>Entrada</span>$238.70</div>
+        <div><span>Precio</span>$275.04</div>
+        <div><span>Stop</span>$226.76</div>
+        <div><span>ATR</span>$9.63</div>
+      </div>
+      <div class="bar"><div style="width:100%;background:#00E599"></div></div>
+      <div class="bar-label">17.6% sobre el stop · con margen</div>
+    </div>
+    <div class="pos">
+      <div class="pos-head"><span class="sym">SNOW</span>
+        <span class="pnl" style="color:#00E599">+10.69%</span></div>
+      <div class="pos-sub">22 acciones · $8,116
+        <span style="color:#00E599">(+$784)</span></div>
+      <div class="pos-grid">
+        <div><span>Entrada</span>$333.25</div>
+        <div><span>Precio</span>$368.89</div>
+        <div><span>Stop</span>$295.46</div>
+        <div><span>ATR</span>$17.59</div>
+      </div>
+      <div class="bar"><div style="width:100%;background:#00E599"></div></div>
+      <div class="bar-label">19.9% sobre el stop · con margen</div>
+    </div>
+    <div class="pos">
+      <div class="pos-head"><span class="sym">ZS</span>
+        <span class="pnl" style="color:#00E599">+21.32%</span></div>
+      <div class="pos-sub">34 acciones · $7,947
+        <span style="color:#00E599">(+$1,397)</span></div>
+      <div class="pos-grid">
+        <div><span>Entrada</span>$192.65</div>
+        <div><span>Precio</span>$233.73</div>
+        <div><span>Stop</span>$183.02</div>
+        <div><span>ATR</span>—</div>
+      </div>
+      <div class="bar"><div style="width:100%;background:#00E599"></div></div>
+      <div class="bar-label">21.7% sobre el stop · con margen</div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Historial de operaciones</div>
+    <div style="margin-bottom:14px">
+      <div class="kv"><span>Mejor operación</span><b style="color:#00E599">WDAY +$1,191</b></div>
+      <div class="kv"><span>Peor operación</span><b style="color:#FF3B5C">MNST −$671</b></div>
+      <div class="kv"><span>Ganancia promedio</span><b>+$318</b></div>
+      <div class="kv"><span>Pérdida promedio</span><b>−$223</b></div></div>
+    <div class="timeline">
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>GOOGL</b>
+          <span style="color:#00E599">+$213 · +2.21%</span></div>
+        <div class="ev-sub">25 sep → 30 sep 2026 · 5 días ·
+          28.0 acciones · $343.93 → $351.55</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>TEAM</b>
+          <span style="color:#00E599">+$368 · +72.13%</span></div>
+        <div class="ev-sub">29 jul → 28 sep 2026 · 61 días ·
+          5 acciones · $101.93 → $175.46</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>TEAM</b>
+          <span style="color:#00E599">+$881 · +71.98%</span></div>
+        <div class="ev-sub">29 jul → 28 sep 2026 · 61 días ·
+          12.0 acciones · $101.99 → $175.40</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>QCOM</b>
+          <span style="color:#FF3B5C">−$183 · −1.81%</span></div>
+        <div class="ev-sub">23 sep → 23 sep 2026 · 0 días ·
+          51 acciones · $197.97 → $194.38</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>SMCI</b>
+          <span style="color:#00E599">+$70 · +1.03%</span></div>
+        <div class="ev-sub">17 sep → 23 sep 2026 · 6 días ·
+          166 acciones · $40.75 → $41.17</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>QCOM</b>
+          <span style="color:#FF3B5C">−$20 · −2.01%</span></div>
+        <div class="ev-sub">23 sep → 23 sep 2026 · 0 días ·
+          5 acciones · $198.37 → $194.38</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>TSLA</b>
+          <span style="color:#00E599">+$143 · +5.67%</span></div>
+        <div class="ev-sub">16 sep → 23 sep 2026 · 7 días ·
+          7 acciones · $361.68 → $382.17</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>TSLA</b>
+          <span style="color:#00E599">+$40 · +5.53%</span></div>
+        <div class="ev-sub">16 sep → 23 sep 2026 · 7 días ·
+          2 acciones · $361.68 → $381.68</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>TSLA</b>
+          <span style="color:#00E599">+$133 · +5.25%</span></div>
+        <div class="ev-sub">16 sep → 23 sep 2026 · 7 días ·
+          7 acciones · $361.68 → $380.67</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#00E599">▲</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>TSLA</b>
+          <span style="color:#00E599">+$188 · +5.77%</span></div>
+        <div class="ev-sub">16 sep → 23 sep 2026 · 7 días ·
+          9.0 acciones · $361.68 → $382.55</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>GOOGL</b>
+          <span style="color:#FF3B5C">−$21 · −0.23%</span></div>
+        <div class="ev-sub">15 sep → 17 sep 2026 · 2 días ·
+          27.0 acciones · $346.41 → $345.62</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>COIN</b>
+          <span style="color:#FF3B5C">−$104 · −2.09%</span></div>
+        <div class="ev-sub">16 sep → 16 sep 2026 · 0 días ·
+          30.0 acciones · $166.03 → $162.56</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>QCOM</b>
+          <span style="color:#FF3B5C">−$271 · −2.74%</span></div>
+        <div class="ev-sub">11 sep → 14 sep 2026 · 3 días ·
+          54.0 acciones · $182.74 → $177.73</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>COIN</b>
+          <span style="color:#FF3B5C">−$167 · −6.04%</span></div>
+        <div class="ev-sub">3 sep → 10 sep 2026 · 7 días ·
+          15.0 acciones · $184.45 → $173.31</div>
+      </div>
+    </div>
+    <div class="ev">
+      <div class="ev-dot" style="background:#FF3B5C">▼</div>
+      <div class="ev-body">
+        <div class="ev-top"><b>COIN</b>
+          <span style="color:#FF3B5C">−$210 · −5.71%</span></div>
+        <div class="ev-sub">3 sep → 10 sep 2026 · 7 días ·
+          20 acciones · $183.80 → $173.31</div>
+      </div>
+    </div></div><div class="ev-more">Mostrando las 15 más recientes de 49.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Cómo opera el bot</div>
+    <div class="strategy">
+      <b>Compra</b> cuando una acción rompe su máximo de los últimos días con <b>volumen ≥ 1.5×</b> el promedio
+      y está por encima de su <b>media de 50 días</b>. <b>Vende</b> cuando el precio cae por debajo de su
+      <b>stop dinámico</b>: el máximo desde la compra menos <b>2.5 × ATR(14)</b>, que solo sube.
+      Arriesga como máximo el <b>2%</b> del portafolio por operación y tiene hasta <b>8</b> posiciones.
+    </div>
   </div>
 </div>
 
-<footer>Chandelier Exit Bot · ATR(14) × 2.5 · Alpaca Paper Trading · Solo fines educativos</footer>
+<footer>Chandelier Exit Bot · Alpaca Paper Trading · Solo fines educativos</footer>
+<script>
+(function(){
+  var box=document.getElementById('eqchart'); if(!box) return;
+  var data=JSON.parse(document.getElementById('eqdata').textContent);
+  var svg=box.querySelector('svg'), tip=document.getElementById('eqtip'),
+      vx=document.getElementById('eqx'), dot=document.getElementById('eqdot');
+  var L=+box.dataset.l, R=+box.dataset.r, W=+box.dataset.w;
+  var pts=[].slice.call(svg.querySelectorAll('path'))[1].getAttribute('d').slice(1).split(' L').map(function(p){return p.split(',').map(Number);});
+  var meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  function fecha(s){var p=s.split('-');return (+p[2])+' '+meses[+p[1]-1]+' '+p[0];}
+  function show(e){
+    var r=svg.getBoundingClientRect(), cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    var vxp=cx*W/r.width, i=Math.round((vxp-L)/(R-L)*(data.length-1));
+    i=Math.max(0,Math.min(data.length-1,i));
+    var p=pts[i]; vx.setAttribute('x1',p[0]); vx.setAttribute('x2',p[0]); vx.style.display='';
+    dot.setAttribute('cx',p[0]); dot.setAttribute('cy',p[1]); dot.style.display='';
+    var diff=data[i][1]-50000.0;
+    tip.innerHTML='$'+Math.round(data[i][1]).toLocaleString('en-US')+
+      '<small>'+fecha(data[i][0])+' · '+(diff>=0?'+':'−')+'$'+Math.abs(Math.round(diff)).toLocaleString('en-US')+'</small>';
+    tip.style.display=''; tip.style.left=Math.max(60,Math.min(r.width-60,p[0]*r.width/W))+'px';
+  }
+  function hide(){tip.style.display='none';vx.style.display='none';dot.style.display='none';}
+  svg.addEventListener('mousemove',show); svg.addEventListener('touchmove',show,{passive:true});
+  svg.addEventListener('mouseleave',hide); svg.addEventListener('touchend',hide);
+})();
+</script>
 </body>
 </html>
