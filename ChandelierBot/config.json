@@ -6,13 +6,15 @@
   "strategy": {
     "name": "Chandelier Exit ATR Trailing Stop",
     "atr_period": 14,
-    "atr_multiplier": 2.5,
-    "breakout_days": 55,
+    "atr_multiplier": 3.0,
+    "breakout_days": 20,
     "ma_trend_days": 50,
     "volume_multiplier": 1.5,
     "risk_per_trade_pct": 2.0,
-    "max_position_pct": 20.0,
-    "max_positions": 8
+    "max_position_pct": 12.5,
+    "max_positions": 8,
+    "market_filter_symbol": "QQQ",
+    "market_filter_ma": 200
   },
   "universe": [
     "AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","AVGO","COST","NFLX",

@@ -235,6 +235,9 @@ def render_portfolio_page(d):
     peak = max((v for _, v in history), default=equity)
     drawdown = (equity - peak) / peak * 100 if peak else 0
 
+    st = d.get("strategy", {})
+    market_txt = (f', y solo si <b>{escape(st["market_sym"])}</b> está sobre su <b>media de {st["market_ma"]} días</b>'
+                  if st.get("market_ma") else "")
     cash_note = ('<div class="note">⚠️ Efectivo negativo: la cuenta está usando margen.</div>'
                  if cash < 0 else "")
     best_worst = ""
@@ -422,10 +425,11 @@ footer{{position:relative;z-index:10;text-align:center;padding:20px;font-family:
   <div class="card">
     <div class="card-label">Cómo opera el bot</div>
     <div class="strategy">
-      <b>Compra</b> cuando una acción rompe su máximo de los últimos días con <b>volumen ≥ 1.5×</b> el promedio
-      y está por encima de su <b>media de 50 días</b>. <b>Vende</b> cuando el precio cae por debajo de su
-      <b>stop dinámico</b>: el máximo desde la compra menos <b>2.5 × ATR(14)</b>, que solo sube.
-      Arriesga como máximo el <b>2%</b> del portafolio por operación y tiene hasta <b>{d["max_positions"]}</b> posiciones.
+      <b>Compra</b> cuando una acción cierra sobre su máximo de los últimos <b>{st.get("bkout", 20)} días</b> con
+      <b>volumen ≥ 1.5×</b> el promedio y por encima de su <b>media de 50 días</b>{market_txt}. <b>Vende</b> cuando
+      el precio cierra por debajo de su <b>stop dinámico</b>: el máximo desde la compra menos
+      <b>{st.get("atr_mult", 2.5):g} × ATR(14)</b>, que solo sube. Arriesga como máximo el <b>2%</b> del portafolio por
+      operación, hasta <b>{st.get("max_pos_pct", 20):g}%</b> por posición y <b>{d["max_positions"]}</b> posiciones.
     </div>
   </div>
 </div>
