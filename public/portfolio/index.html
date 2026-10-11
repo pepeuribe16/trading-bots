@@ -106,7 +106,7 @@ footer{position:relative;z-index:10;text-align:center;padding:20px;font-family:'
 <div class="wrap">
   <div class="eyebrow"><div class="pulse"></div> Chandelier Exit ATR · Paper Trading</div>
   <h1>Auto <span>BOT</span></h1>
-  <div class="subtitle">Actualizado 11 Oct 2026 · 18:47 CT · Cuenta paper PA3005WTJRYE</div>
+  <div class="subtitle">Actualizado 11 Oct 2026 · 19:29 CT · Cuenta paper PA3005WTJRYE</div>
 
   <div class="hero">
     <div>
@@ -418,10 +418,11 @@ footer{position:relative;z-index:10;text-align:center;padding:20px;font-family:'
   <div class="card">
     <div class="card-label">Cómo opera el bot</div>
     <div class="strategy">
-      <b>Compra</b> cuando una acción rompe su máximo de los últimos días con <b>volumen ≥ 1.5×</b> el promedio
-      y está por encima de su <b>media de 50 días</b>. <b>Vende</b> cuando el precio cae por debajo de su
-      <b>stop dinámico</b>: el máximo desde la compra menos <b>2.5 × ATR(14)</b>, que solo sube.
-      Arriesga como máximo el <b>2%</b> del portafolio por operación y tiene hasta <b>8</b> posiciones.
+      <b>Compra</b> cuando una acción cierra sobre su máximo de los últimos <b>20 días</b> con
+      <b>volumen ≥ 1.5×</b> el promedio y por encima de su <b>media de 50 días</b>, y solo si <b>QQQ</b> está sobre su <b>media de 200 días</b>. <b>Vende</b> cuando
+      el precio cierra por debajo de su <b>stop dinámico</b>: el máximo desde la compra menos
+      <b>3 × ATR(14)</b>, que solo sube. Arriesga como máximo el <b>2%</b> del portafolio por
+      operación, hasta <b>12.5%</b> por posición y <b>8</b> posiciones.
     </div>
   </div>
 </div>
