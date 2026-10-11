@@ -1,572 +1,468 @@
 """
-Chandelier Exit ATR Backtest
------------------------------
-Simula la estrategia día a día desde START_DATE hasta hoy.
-Usa datos históricos reales de Alpaca Data API.
-Genera public/backtest/index.html con el reporte completo.
+Chandelier Exit ATR — backtest comparativo
+-------------------------------------------
+Simula varias configuraciones de la estrategia sobre los mismos datos diarios
+de Alpaca y genera public/backtest/index.html con la comparación.
+
+Supuestos (iguales para todas las variantes):
+  - Las señales se calculan al cierre del día y se ejecutan a la APERTURA del día
+    siguiente (compras y ventas).
+  - Stop Chandelier = cierre más alto DESDE LA COMPRA − k × ATR(14); solo sube.
+    El stop inicial es cierre de la señal − k × ATR.
+  - Tamaño: riesgo 2% del capital / distancia al stop, con tope por posición.
+    El efectivo nunca queda negativo (sin margen). Sin comisiones.
+  - Universo: el de ChandelierBot/config.json. Filtro de mercado con QQQ.
 """
-import os
 import json
+import os
+from datetime import date, datetime, timedelta
+from html import escape
+
 import requests
-from datetime import datetime, date, timedelta
-from collections import defaultdict
 
-# ── Config ─────────────────────────────────────────────────────────────────────
-API_KEY    = os.environ["ALPACA_API_KEY"]
-API_SECRET = os.environ["ALPACA_API_SECRET"]
-DATA       = "https://data.alpaca.markets/v2"
-HEADS      = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": API_SECRET}
+DATA = "https://data.alpaca.markets/v2"
+START_DATE = date(2025, 6, 26)
+FETCH_FROM = START_DATE - timedelta(days=330)   # calentamiento para MA200 y breakout 55d
+END_DATE = date.today()
+INITIAL_CAP = 50_000.0
+ATR_PERIOD = 14
+MA_DAYS = 50
+VOL_MULT = 1.5
+RISK_PCT = 0.02
+MAX_POS = 8
+MARKET = "QQQ"
 
-START_DATE   = date(2025, 6, 26)
-FETCH_FROM   = date(2024, 12, 1)  # ~120 barras de warmup para breakout 55d
-END_DATE     = date.today()
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ChandelierBot", "config.json")) as f:
+    TICKERS = json.load(f)["universe"]
 
-INITIAL_CAP  = 50_000.0
-ATR_PERIOD   = 14
-ATR_MULT     = 2.5
-BKOUT_DAYS   = 55
-MA_DAYS      = 50
-VOL_MULT     = 1.5
-RISK_PCT     = 0.02
-MAX_POS_PCT  = 0.20
-MAX_POS      = 8
-BARS_NEEDED  = max(MA_DAYS, BKOUT_DAYS) + ATR_PERIOD + 5
-
-with open(os.path.join(os.path.dirname(__file__), "ChandelierBot", "config.json")) as f:
-    cfg = json.load(f)
-TICKERS = cfg["universe"]
+# Cada variante agrega UN cambio sobre la anterior (desde "Bot del repo"), para ver
+# cuánto aporta cada ajuste. "Rutina 20d" replica la regla de la rutina de Claude.
+VARIANTS = [
+    {"key": "repo", "name": "Bot del repo (actual)", "desc": "Breakout 55d · stop 2.5 ATR · 20% por posición",
+     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.20, "cooldown": 0, "regime": None},
+    {"key": "rutina", "name": "Rutina de Claude (20d)", "desc": "Igual, con breakout de 20 días",
+     "bkout": 20, "atr_mult": 2.5, "max_pos_pct": 0.20, "cooldown": 0, "regime": None},
+    {"key": "expo", "name": "+ Exposición ≤ 100%", "desc": "Bot del repo con 12.5% máximo por posición",
+     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 0, "regime": None},
+    {"key": "pausa", "name": "+ Pausa de 10 días", "desc": "No recompra un símbolo en 10 días tras venderlo",
+     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 10, "regime": None},
+    {"key": "filtro", "name": "+ Filtro QQQ > MA200", "desc": "Solo compra si QQQ cierra sobre su media de 200 días",
+     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 10, "regime": 200},
+    {"key": "stop3", "name": "+ Stop 3.0 ATR", "desc": "Stop más amplio (el riesgo sigue en 2%)",
+     "bkout": 55, "atr_mult": 3.0, "max_pos_pct": 0.125, "cooldown": 10, "regime": 200},
+]
+COLORS = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"]  # validados sobre #111520
 
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 
-# ── Data fetch ─────────────────────────────────────────────────────────────────
-def fetch_all_bars():
-    """Descarga todas las barras diarias para todos los tickers de una vez."""
-    log(f"Descargando barras históricas {FETCH_FROM} → {END_DATE} para {len(TICKERS)} tickers...")
-    all_bars = {}
-    for i in range(0, len(TICKERS), 10):
-        batch = TICKERS[i:i+10]
-        params = {
-            "symbols": ",".join(batch),
-            "timeframe": "1Day",
-            "start": FETCH_FROM.isoformat(),
-            "end": END_DATE.isoformat(),
-            "limit": 10000,
-            "feed": "iex",
-            "adjustment": "all",
-        }
-        r = requests.get(f"{DATA}/stocks/bars", headers=HEADS, params=params, timeout=30)
-        if r.ok:
-            for sym, bars in r.json().get("bars", {}).items():
-                all_bars[sym] = bars
-        log(f"  batch {i//10+1}/{(len(TICKERS)+9)//10}: {len(batch)} tickers OK")
-    return all_bars
-
-
-def build_daily_index(all_bars):
-    """Devuelve {sym: {date_str: bar_index}} para lookup rápido."""
-    index = {}
-    for sym, bars in all_bars.items():
-        index[sym] = {}
-        for i, bar in enumerate(bars):
-            d = bar["t"][:10]
-            index[sym][d] = i
-    return index
-
-
-def get_trading_days(all_bars):
-    """Todas las fechas de mercado abierto en el rango de simulación."""
-    days = set()
-    for bars in all_bars.values():
-        for bar in bars:
-            d = bar["t"][:10]
-            if d >= START_DATE.isoformat() and d <= END_DATE.isoformat():
-                days.add(d)
-    return sorted(days)
-
-
-# ── Indicators ─────────────────────────────────────────────────────────────────
-def calc_atr(bars):
-    trs = []
-    for i in range(1, len(bars)):
-        h, l, pc = bars[i]["h"], bars[i]["l"], bars[i-1]["c"]
-        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
-    if len(trs) < ATR_PERIOD:
-        return None
-    return sum(trs[-ATR_PERIOD:]) / ATR_PERIOD
-
-
-def chandelier_stop_val(bars, atr):
-    return max(b["c"] for b in bars) - ATR_MULT * atr
-
-
-def entry_signal(bars):
-    if len(bars) < BARS_NEEDED:
-        return None
-    today   = bars[-1]
-    prior20 = bars[-(BKOUT_DAYS+1):-1]
-    prior50 = bars[-MA_DAYS:]
-    close, volume = today["c"], today["v"]
-    high20  = max(b["c"] for b in prior20)
-    avgvol  = sum(b["v"] for b in prior20) / len(prior20)
-    ma50    = sum(b["c"] for b in prior50) / len(prior50)
-    if not (close > high20 and volume >= avgvol * VOL_MULT and close > ma50):
-        return None
-    atr = calc_atr(bars)
-    if not atr:
-        return None
-    return close, close - ATR_MULT * atr, atr, volume / avgvol
-
-
-def calc_qty(portfolio, entry, stop):
-    dist = entry - stop
-    if dist <= 0:
-        return 0
-    by_risk = int(portfolio * RISK_PCT / dist)
-    by_cap  = int(portfolio * MAX_POS_PCT / entry)
-    return max(1, min(by_risk, by_cap))
-
-
-# ── Backtest engine ────────────────────────────────────────────────────────────
-def run_backtest(all_bars, daily_index, trading_days):
-    cash       = INITIAL_CAP
-    positions  = {}   # sym -> {qty, entry, stop}
-    equity_curve = []  # [{date, equity, cash, n_pos}]
-    trades     = []    # closed trades log
-
-    log(f"Simulando {len(trading_days)} días de mercado ({trading_days[0]} → {trading_days[-1]})...")
-
-    for day_str in trading_days:
-        # ── Valorar posiciones abiertas ────────────────────────────────────────
-        mkt_value = 0.0
-        to_close  = []
-
-        for sym, pos in positions.items():
-            idx = daily_index.get(sym, {}).get(day_str)
-            if idx is None:
-                mkt_value += pos["qty"] * pos["entry"]
-                continue
-            bars_up_to = all_bars[sym][:idx+1]
-            price = bars_up_to[-1]["c"]
-            atr   = calc_atr(bars_up_to)
-
-            if atr:
-                new_stop = chandelier_stop_val(bars_up_to, atr)
-                pos["stop"] = max(pos["stop"], new_stop)
-
-            mkt_value += pos["qty"] * price
-
-            if price <= pos["stop"]:
-                pnl = (price - pos["entry"]) * pos["qty"]
-                trades.append({
-                    "sym": sym, "entry_date": pos["entry_date"], "exit_date": day_str,
-                    "entry": pos["entry"], "exit": price, "qty": pos["qty"],
-                    "pnl": pnl, "pnl_pct": (price - pos["entry"]) / pos["entry"] * 100,
-                    "result": "WIN" if pnl > 0 else "LOSS",
-                })
-                cash += pos["qty"] * price
-                mkt_value -= pos["qty"] * price
-                to_close.append(sym)
-
-        for sym in to_close:
-            del positions[sym]
-
-        equity = cash + mkt_value
-        equity_curve.append({"date": day_str, "equity": round(equity, 2),
-                              "cash": round(cash, 2), "n_pos": len(positions)})
-
-        # ── Escanear entradas ──────────────────────────────────────────────────
-        slots = MAX_POS - len(positions)
-        if slots <= 0 or cash < 500:
-            continue
-
-        candidates = []
-        for sym in TICKERS:
-            if sym in positions:
-                continue
-            idx = daily_index.get(sym, {}).get(day_str)
-            if idx is None or idx < BARS_NEEDED:
-                continue
-            bars_up_to = all_bars[sym][:idx+1]
-            result = entry_signal(bars_up_to)
-            if result:
-                price, stop, atr, vol_ratio = result
-                candidates.append((sym, price, stop, atr, vol_ratio))
-
-        candidates.sort(key=lambda x: x[4], reverse=True)
-        bought = 0
-        for sym, price, stop, atr, vol_ratio in candidates:
-            if bought >= slots or cash < price:
+# ── Datos ──────────────────────────────────────────────────────────────────────
+def fetch_all_bars(symbols, heads):
+    log(f"Descargando barras {FETCH_FROM} → {END_DATE} para {len(symbols)} símbolos...")
+    out = {}
+    for i in range(0, len(symbols), 10):
+        params = {"symbols": ",".join(symbols[i:i + 10]), "timeframe": "1Day",
+                  "start": FETCH_FROM.isoformat(), "end": END_DATE.isoformat(),
+                  "limit": 10000, "feed": "iex", "adjustment": "all"}
+        while True:
+            r = requests.get(f"{DATA}/stocks/bars", headers=heads, params=params, timeout=30)
+            r.raise_for_status()
+            body = r.json()
+            for sym, bars in (body.get("bars") or {}).items():
+                out.setdefault(sym, []).extend(bars)
+            if not body.get("next_page_token"):
                 break
-            qty  = calc_qty(equity, price, stop)
-            cost = qty * price
-            if cost > cash:
-                qty  = max(1, int(cash / price))
-                cost = qty * price
+            params["page_token"] = body["next_page_token"]
+    log(f"  {len(out)} símbolos con datos")
+    return out
+
+
+# ── Indicadores ────────────────────────────────────────────────────────────────
+def atr_at(bars, i):
+    if i < ATR_PERIOD:
+        return None
+    trs = [max(bars[j]["h"] - bars[j]["l"], abs(bars[j]["h"] - bars[j - 1]["c"]),
+               abs(bars[j]["l"] - bars[j - 1]["c"])) for j in range(i - ATR_PERIOD + 1, i + 1)]
+    return sum(trs) / ATR_PERIOD
+
+
+def signal_at(bars, i, bkout):
+    """Breakout de `bkout` días + volumen ≥ 1.5× + cierre > MA50, evaluado al cierre de i."""
+    if i < max(bkout, MA_DAYS) + ATR_PERIOD:
+        return None
+    c, v = bars[i]["c"], bars[i]["v"]
+    prior = bars[i - bkout:i]
+    if c <= max(b["c"] for b in prior):
+        return None
+    avg_vol = sum(b["v"] for b in prior) / bkout
+    if v < avg_vol * VOL_MULT:
+        return None
+    if c <= sum(b["c"] for b in bars[i - MA_DAYS + 1:i + 1]) / MA_DAYS:
+        return None
+    atr = atr_at(bars, i)
+    return (c, atr, v / avg_vol) if atr else None
+
+
+# ── Motor ──────────────────────────────────────────────────────────────────────
+def simulate(p, bars, idx, days, market):
+    cash, positions, trades, curve = INITIAL_CAP, {}, [], []
+    last_exit = {}
+    pend_sell, pend_buy = set(), []
+    for day in days:
+        d = date.fromisoformat(day)
+        # 1) Ejecutar a la apertura las órdenes decididas ayer.
+        for sym in sorted(pend_sell):
+            pos, i = positions.get(sym), idx[sym].get(day)
+            if pos is None or i is None:
+                continue
+            px = bars[sym][i]["o"]
+            cash += pos["qty"] * px
+            pnl = (px - pos["entry"]) * pos["qty"]
+            trades.append({"sym": sym, "entry_date": pos["date"], "exit_date": day, "qty": pos["qty"],
+                           "entry": pos["entry"], "exit": px, "pnl": pnl,
+                           "pnl_pct": (px - pos["entry"]) / pos["entry"] * 100, "open": False})
+            del positions[sym]
+            last_exit[sym] = d
+        pend_sell = {s for s in pend_sell if s in positions}
+        for sym, qty, stop in pend_buy:
+            i = idx[sym].get(day)
+            if i is None or sym in positions or len(positions) >= MAX_POS:
+                continue
+            px = bars[sym][i]["o"]
+            qty = min(qty, int(cash / px))
             if qty < 1:
                 continue
-            positions[sym] = {
-                "qty": qty, "entry": price, "stop": stop,
-                "entry_date": day_str
-            }
-            cash -= cost
-            bought += 1
+            cash -= qty * px
+            positions[sym] = {"qty": qty, "entry": px, "stop": stop, "hi": px, "date": day}
+        pend_buy = []
 
-    # Cerrar posiciones abiertas al precio del último día
-    last_day = trading_days[-1]
+        # 2) Al cierre: actualizar stops y decidir ventas.
+        value = 0.0
+        for sym, pos in positions.items():
+            i = idx[sym].get(day)
+            if i is None:
+                value += pos["qty"] * pos.get("last", pos["entry"])
+                continue
+            c = bars[sym][i]["c"]
+            pos["last"] = c
+            pos["hi"] = max(pos["hi"], c)
+            atr = atr_at(bars[sym], i)
+            if atr:
+                pos["stop"] = max(pos["stop"], pos["hi"] - p["atr_mult"] * atr)
+            value += pos["qty"] * c
+            if c <= pos["stop"]:
+                pend_sell.add(sym)
+        equity = cash + value
+        curve.append((day, equity, len(positions)))
+
+        # 3) Al cierre: buscar entradas para ejecutar mañana.
+        if p["regime"]:
+            mi = idx[MARKET].get(day)
+            mb = bars[MARKET]
+            if mi is None or mi < p["regime"]:
+                continue
+            ma = sum(b["c"] for b in mb[mi - p["regime"] + 1:mi + 1]) / p["regime"]
+            if mb[mi]["c"] <= ma:
+                continue
+        slots = MAX_POS - (len(positions) - len(pend_sell))
+        if slots <= 0:
+            continue
+        cands = []
+        for sym in TICKERS:
+            if sym in positions or sym not in idx:
+                continue
+            if p["cooldown"] and sym in last_exit and (d - last_exit[sym]).days < p["cooldown"]:
+                continue
+            i = idx[sym].get(day)
+            if i is None:
+                continue
+            sig = signal_at(bars[sym], i, p["bkout"])
+            if sig:
+                cands.append((sig[2], sym, sig[0], sig[1]))
+        for _, sym, c, atr in sorted(cands, reverse=True)[:slots]:
+            stop = c - p["atr_mult"] * atr
+            by_risk = int(equity * RISK_PCT / (c - stop))
+            by_cap = int(equity * p["max_pos_pct"] / c)
+            qty = min(by_risk, by_cap)
+            if qty >= 1:
+                pend_buy.append((sym, qty, stop))
+
+    last = days[-1]
     for sym, pos in positions.items():
-        idx = daily_index.get(sym, {}).get(last_day)
-        if idx is not None:
-            price = all_bars[sym][idx]["c"]
-        else:
-            price = pos["entry"]
-        pnl = (price - pos["entry"]) * pos["qty"]
-        trades.append({
-            "sym": sym, "entry_date": pos["entry_date"], "exit_date": last_day,
-            "entry": pos["entry"], "exit": price, "qty": pos["qty"],
-            "pnl": pnl, "pnl_pct": (price - pos["entry"]) / pos["entry"] * 100,
-            "result": "OPEN",
-        })
-
-    return equity_curve, trades
+        px = pos.get("last", pos["entry"])
+        trades.append({"sym": sym, "entry_date": pos["date"], "exit_date": last, "qty": pos["qty"],
+                       "entry": pos["entry"], "exit": px, "pnl": (px - pos["entry"]) * pos["qty"],
+                       "pnl_pct": (px - pos["entry"]) / pos["entry"] * 100, "open": True})
+    return curve, trades
 
 
-# ── Stats ──────────────────────────────────────────────────────────────────────
-def calc_stats(equity_curve, trades):
-    equities = [e["equity"] for e in equity_curve]
-    final    = equities[-1]
-    total_ret = (final - INITIAL_CAP) / INITIAL_CAP * 100
-
-    # Max drawdown
-    peak = INITIAL_CAP
-    max_dd = 0.0
-    for eq in equities:
-        if eq > peak:
-            peak = eq
-        dd = (peak - eq) / peak * 100
-        if dd > max_dd:
-            max_dd = dd
-
-    # Daily returns for Sharpe
-    daily_rets = []
-    for i in range(1, len(equities)):
-        daily_rets.append((equities[i] - equities[i-1]) / equities[i-1])
-    avg_ret = sum(daily_rets) / len(daily_rets) if daily_rets else 0
-    std_ret = (sum((r - avg_ret)**2 for r in daily_rets) / len(daily_rets))**0.5 if daily_rets else 0
-    sharpe  = (avg_ret / std_ret * (252**0.5)) if std_ret > 0 else 0
-
-    closed = [t for t in trades if t["result"] != "OPEN"]
-    wins   = [t for t in closed if t["result"] == "WIN"]
-    win_rate = len(wins) / len(closed) * 100 if closed else 0
-    avg_win  = sum(t["pnl_pct"] for t in wins) / len(wins) if wins else 0
-    losses_t = [t for t in closed if t["result"] == "LOSS"]
-    avg_loss = sum(t["pnl_pct"] for t in losses_t) / len(losses_t) if losses_t else 0
-
+def stats(curve, trades):
+    eq = [e for _, e, _ in curve]
+    peak, mdd = INITIAL_CAP, 0.0
+    for e in eq:
+        peak = max(peak, e)
+        mdd = max(mdd, (peak - e) / peak * 100)
+    rets = [eq[i] / eq[i - 1] - 1 for i in range(1, len(eq))]
+    mean = sum(rets) / len(rets) if rets else 0
+    sd = (sum((r - mean) ** 2 for r in rets) / len(rets)) ** 0.5 if rets else 0
+    closed = [t for t in trades if not t["open"]]
+    wins = [t for t in closed if t["pnl"] > 0]
+    losses = [t for t in closed if t["pnl"] <= 0]
+    gw, gl = sum(t["pnl"] for t in wins), -sum(t["pnl"] for t in losses)
+    half = len(curve) // 2
+    h1 = curve[half][1] / INITIAL_CAP - 1 if curve else 0
+    h2 = curve[-1][1] / curve[half][1] - 1 if curve else 0
     return {
-        "final_equity": final,
-        "total_return": total_ret,
-        "max_drawdown": max_dd,
-        "sharpe": sharpe,
-        "total_trades": len(closed),
-        "win_rate": win_rate,
-        "avg_win": avg_win,
-        "avg_loss": avg_loss,
-        "best_trade": max((t["pnl_pct"] for t in closed), default=0),
-        "worst_trade": min((t["pnl_pct"] for t in closed), default=0),
+        "ret": (eq[-1] / INITIAL_CAP - 1) * 100, "final": eq[-1], "mdd": mdd,
+        "sharpe": mean / sd * 252 ** 0.5 if sd else 0,
+        "n": len(closed), "open": len(trades) - len(closed),
+        "win_rate": len(wins) / len(closed) * 100 if closed else 0,
+        "avg_win": gw / len(wins) if wins else 0, "avg_loss": -gl / len(losses) if losses else 0,
+        "pf": gw / gl if gl else 0,
+        "expectancy": (gw - gl) / len(closed) if closed else 0,
+        "exposure": sum(n for _, _, n in curve) / len(curve) / MAX_POS * 100 if curve else 0,
+        "h1": h1 * 100, "h2": h2 * 100, "half_date": curve[half][0] if curve else "",
     }
 
 
-# ── HTML generator ─────────────────────────────────────────────────────────────
-def generate_html(equity_curve, trades, stats):
-    now_str  = datetime.now().strftime("%d %b %Y · %H:%M CT")
-    ret_color = "#00E599" if stats["total_return"] >= 0 else "#FF3B5C"
-    ret_sign  = "+" if stats["total_return"] >= 0 else ""
+# ── Página ─────────────────────────────────────────────────────────────────────
+MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
-    # SVG equity curve
-    equities = [e["equity"] for e in equity_curve]
-    dates    = [e["date"] for e in equity_curve]
-    n = len(equities)
-    W, H = 620, 220
-    PAD_L, PAD_R, PAD_T, PAD_B = 64, 20, 20, 36
 
-    mn, mx = min(equities), max(equities)
-    rng    = mx - mn if mx != mn else 1
+def fecha(iso, year=True):
+    d = date.fromisoformat(iso)
+    return f"{d.day} {MESES[d.month - 1]}" + (f" {d.year}" if year else "")
 
-    def sx(i):
-        return PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R)
 
-    def sy(v):
-        return PAD_T + (1 - (v - mn) / rng) * (H - PAD_T - PAD_B)
+def money(v, sign=False):
+    s = f"${abs(v):,.0f}"
+    return ("−" + s) if v < 0 else (("+" + s) if sign else s)
 
-    # Polyline points
-    pts  = " ".join(f"{sx(i):.1f},{sy(v):.1f}" for i, v in enumerate(equities))
-    # Fill polygon (close at bottom)
-    fill = pts + f" {sx(n-1):.1f},{H-PAD_B} {sx(0):.1f},{H-PAD_B}"
 
-    # Baseline (initial capital)
-    base_y = sy(INITIAL_CAP)
+def pct(v, sign=True):
+    return ("−" if v < 0 else ("+" if sign else "")) + f"{abs(v):.1f}%"
 
-    # Y-axis labels
-    y_labels = []
-    for frac in [0, 0.25, 0.5, 0.75, 1.0]:
-        val = mn + frac * rng
-        y   = PAD_T + (1 - frac) * (H - PAD_T - PAD_B)
-        y_labels.append((val, y))
 
-    # X-axis labels (monthly)
-    x_labels = []
-    months_seen = set()
-    for i, d in enumerate(dates):
-        ym = d[:7]
-        if ym not in months_seen:
-            months_seen.add(ym)
-            label = datetime.strptime(d, "%Y-%m-%d").strftime("%b %y")
-            x_labels.append((sx(i), label))
+def chart(results, days, benchmark):
+    W, H, L, R, T, B = 760, 300, 58, 150, 14, 30
+    allv = [e for r in results for _, e, _ in r["curve"]] + [v for _, v in benchmark] + [INITIAL_CAP]
+    lo, hi = min(allv), max(allv)
+    pad = (hi - lo) * 0.06
+    lo, hi = lo - pad, hi + pad
+    n = len(days)
 
-    y_axis_svg = "".join(
-        f'<text x="{PAD_L-6}" y="{y+4}" fill="#6B7A99" font-size="9" text-anchor="end">${val/1000:.0f}k</text>'
-        f'<line x1="{PAD_L}" y1="{y}" x2="{W-PAD_R}" y2="{y}" stroke="#1E2535" stroke-width="1"/>'
-        for val, y in y_labels
-    )
-    x_axis_svg = "".join(
-        f'<text x="{x}" y="{H-PAD_B+14}" fill="#6B7A99" font-size="9" text-anchor="middle">{label}</text>'
-        for x, label in x_labels
-    )
+    def x(i): return L + (W - L - R) * i / (n - 1)
+    def y(v): return T + (H - T - B) * (hi - v) / (hi - lo)
 
-    line_color  = "#00E599" if stats["total_return"] >= 0 else "#FF3B5C"
-    fill_color1 = "rgba(0,229,153,0.18)" if stats["total_return"] >= 0 else "rgba(255,59,92,0.18)"
-    fill_color2 = "rgba(0,229,153,0)" if stats["total_return"] >= 0 else "rgba(255,59,92,0)"
+    span = hi - lo
+    step = next(s for s in (1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000) if span / s <= 6)
+    g = ""
+    t = (int(lo // step) + 1) * step
+    while t < hi:
+        g += (f'<line x1="{L}" x2="{W - R}" y1="{y(t):.1f}" y2="{y(t):.1f}" class="grid"/>'
+              f'<text x="{L - 8}" y="{y(t) + 4:.1f}" class="axis" text-anchor="end">${t / 1000:,.0f}k</text>')
+        t += step
+    g += f'<line x1="{L}" x2="{W - R}" y1="{y(INITIAL_CAP):.1f}" y2="{y(INITIAL_CAP):.1f}" class="base"/>'
+    for j in range(5):
+        i = round(j * (n - 1) / 4)
+        a = "start" if j == 0 else "end" if j == 4 else "middle"
+        g += f'<text x="{x(i):.1f}" y="{H - 8}" class="axis" text-anchor="{a}">{fecha(days[i], False)} {days[i][2:4]}</text>'
 
-    svg = f"""<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
-  <defs>
-    <linearGradient id="eq_grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="{fill_color1}"/>
-      <stop offset="100%" stop-color="{fill_color2}"/>
-    </linearGradient>
-  </defs>
-  <rect width="{W}" height="{H}" fill="#111520" rx="8"/>
-  {y_axis_svg}
-  {x_axis_svg}
-  <line x1="{PAD_L}" y1="{base_y:.1f}" x2="{W-PAD_R}" y2="{base_y:.1f}" stroke="#334155" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="{PAD_L+4}" y="{base_y-4}" fill="#4A5568" font-size="8">$50k base</text>
-  <polygon points="{fill}" fill="url(#eq_grad)"/>
-  <polyline points="{pts}" fill="none" stroke="{line_color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-  <circle cx="{sx(n-1):.1f}" cy="{sy(equities[-1]):.1f}" r="4" fill="{line_color}" stroke="#111520" stroke-width="2"/>
-</svg>"""
+    pos = {d: i for i, d in enumerate(days)}
+    bm = [(pos[d], v) for d, v in benchmark if d in pos]
+    if bm:
+        g += ('<path d="M' + " L".join(f"{x(i):.1f},{y(v):.1f}" for i, v in bm) +
+              '" fill="none" stroke="#6B7A99" stroke-width="1.5" stroke-dasharray="3 3"/>')
+    ends = []
+    for r, col in zip(results, COLORS):
+        pts = [(x(i), y(e)) for i, (_, e, _) in enumerate(r["curve"])]
+        g += (f'<path d="M' + " L".join(f"{a:.1f},{b:.1f}" for a, b in pts) +
+              f'" fill="none" stroke="{col}" stroke-width="2" stroke-linejoin="round" data-k="{r["key"]}"/>')
+        ends.append([pts[-1][1], r, col])
+    # Etiquetas directas al final de cada línea, separadas para que no se encimen.
+    ends.sort(key=lambda e: e[0])
+    for k in range(1, len(ends)):
+        ends[k][0] = max(ends[k][0], ends[k - 1][0] + 14)
+    for ly, r, col in ends:
+        g += (f'<circle cx="{W - R:.1f}" cy="{y(r["curve"][-1][1]):.1f}" r="3.5" fill="{col}"/>'
+              f'<text x="{W - R + 8}" y="{ly + 4:.1f}" class="lbl" fill="{col}">{escape(r["short"])} '
+              f'<tspan class="lblv">{pct(r["s"]["ret"])}</tspan></text>')
+    data = json.dumps({"days": days, "series": [{"name": r["name"], "color": c, "eq": [round(e) for _, e, _ in r["curve"]]}
+                                                for r, c in zip(results, COLORS)],
+                       "bench": [round(v) for _, v in benchmark] if len(benchmark) == len(days) else None})
+    return f"""<div class="chart" id="bt" data-l="{L}" data-r="{W - R}" data-w="{W}" data-t="{T}" data-b="{H - B}">
+<svg viewBox="0 0 {W} {H}" role="img" aria-label="Evolución del capital de cada configuración">{g}
+<line id="btx" y1="{T}" y2="{H - B}" class="cross" style="display:none"/></svg>
+<div id="bttip" class="tip" style="display:none"></div>
+<script type="application/json" id="btdata">{data}</script></div>"""
 
-    # Trade rows (last 30 closed)
-    closed_trades = [t for t in trades if t["result"] != "OPEN"][-30:]
-    open_trades   = [t for t in trades if t["result"] == "OPEN"]
-    trade_rows = ""
-    for t in reversed(closed_trades):
-        clr = "#00E599" if t["result"] == "WIN" else "#FF3B5C"
-        sgn = "+" if t["pnl"] >= 0 else ""
-        trade_rows += f"""<tr>
-          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">{t['sym']}</td>
-          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">{t['entry_date']}</td>
-          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">{t['exit_date']}</td>
-          <td style="font-family:'DM Mono',monospace">${t['entry']:.2f}</td>
-          <td style="font-family:'DM Mono',monospace">${t['exit']:.2f}</td>
-          <td style="font-family:'DM Mono',monospace;color:{clr};font-weight:700">{sgn}{t['pnl_pct']:.1f}%</td>
-          <td style="font-family:'DM Mono',monospace;color:{clr}">{sgn}${t['pnl']:,.0f}</td>
-          <td><span style="background:{'rgba(0,229,153,0.12)' if t['result']=='WIN' else 'rgba(255,59,92,0.12)'};color:{clr};padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">{t['result']}</span></td>
-        </tr>"""
 
-    # Open positions
-    open_rows = ""
-    for t in open_trades:
-        open_rows += f"""<tr>
-          <td style="font-weight:700;color:#E8ECF4;font-family:'DM Mono',monospace">{t['sym']}</td>
-          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">{t['entry_date']}</td>
-          <td style="font-family:'DM Mono',monospace;color:#6B7A99;font-size:11px">{t['exit_date']}</td>
-          <td style="font-family:'DM Mono',monospace">${t['entry']:.2f}</td>
-          <td style="font-family:'DM Mono',monospace">${t['exit']:.2f}</td>
-          <td style="font-family:'DM Mono',monospace;color:#FFB800;font-weight:700">{('+' if t['pnl_pct']>=0 else '')}{t['pnl_pct']:.1f}%</td>
-          <td style="font-family:'DM Mono',monospace;color:#FFB800">{('+' if t['pnl']>=0 else '')}${t['pnl']:,.0f}</td>
-          <td><span style="background:rgba(255,184,0,0.12);color:#FFB800;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace">OPEN</span></td>
-        </tr>"""
+def generate_html(results, days, benchmark, bench_ret, n_bars):
+    base = results[0]["s"]
+    rows = ""
+    best = {k: max(results, key=lambda r: r["s"][k])["key"] for k in ("ret", "sharpe", "win_rate", "pf")}
+    best["mdd"] = min(results, key=lambda r: r["s"]["mdd"])["key"]
+    for r, col in zip(results, COLORS):
+        s = r["s"]
 
+        def cell(k, txt):
+            return f'<td class="{"best" if best.get(k) == r["key"] else ""}">{txt}</td>'
+        rows += f"""<tr><td><i class="sw" style="background:{col}"></i><b>{escape(r["name"])}</b>
+          <div class="desc">{escape(r["desc"])}</div></td>
+          {cell("ret", pct(s["ret"]))}{cell("mdd", "−" + f'{s["mdd"]:.1f}%')}{cell("sharpe", f'{s["sharpe"]:.2f}')}
+          <td>{s["n"]}</td>{cell("win_rate", f'{s["win_rate"]:.0f}%')}
+          <td style="white-space:nowrap">{money(s["avg_win"], True)} / {money(s["avg_loss"])}</td>{cell("pf", f'{s["pf"]:.2f}')}
+          <td>{money(s["expectancy"], True)}</td><td>{pct(s["h1"])} · {pct(s["h2"])}</td>
+          <td>{s["exposure"]:.0f}%</td></tr>"""
+
+    half = fecha(base["half_date"])
     return f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Backtest · Chandelier Exit 55d · 1 año (Jun 2025–Jun 2026)</title>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest · Chandelier Exit</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
-:root{{--bg:#0A0C10;--surface:#111520;--surface2:#181D2B;--border:rgba(255,255,255,0.07);--text:#E8ECF4;--muted:#6B7A99;--green:#00E599;--red:#FF3B5C;--yellow:#FFB800;--blue:#4D8BFF}}
+:root{{--bg:#0A0C10;--surface:#111520;--surface2:#181D2B;--border:rgba(255,255,255,0.07);--text:#E8ECF4;--muted:#8A97B3;--blue:#4D8BFF}}
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}}
-body::before{{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(77,139,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(77,139,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}}
-.nav{{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:10px 24px}}
-.nav-label{{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}}
+.nav{{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,12,16,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;overflow-x:auto}}
+.nav-label{{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:#6B7A99;text-transform:uppercase;white-space:nowrap}}
 .nav-links{{display:flex;gap:8px}}
-.nav-links a{{text-decoration:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.5px}}
-.nav-links a.active{{background:var(--green);color:#000}}
-.nav-links a.inactive{{background:rgba(255,255,255,0.07);color:var(--muted)}}
-.wrap{{position:relative;z-index:10;padding:72px 24px 60px;max-width:960px;margin:0 auto}}
-.eyebrow{{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:8px}}
-h1{{font-family:'DM Serif Display',serif;font-size:clamp(28px,5vw,42px);line-height:1.1;color:#fff;margin-bottom:4px}}
-h1 span{{color:var(--green);font-style:italic}}
-.subtitle{{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:28px}}
-.metrics{{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}}
-.metric{{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}}
-.metric-label{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}}
-.metric-val{{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:#fff}}
+.nav-links a{{text-decoration:none;padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;background:rgba(255,255,255,0.07);color:#6B7A99}}
+.nav-links a.active{{background:var(--blue);color:#fff}}
+.wrap{{padding:76px 20px 48px;max-width:1100px;margin:0 auto}}
+.eyebrow{{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--blue);margin-bottom:8px}}
+h1{{font-family:'DM Serif Display',serif;font-size:clamp(28px,6vw,42px);color:#fff}}
+h1 span{{color:var(--blue);font-style:italic}}
+.subtitle{{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin:6px 0 22px}}
 .card{{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px}}
-.card-label{{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}}
-.card-label::before{{content:'';width:14px;height:2px;background:var(--green);border-radius:2px}}
-table{{width:100%;border-collapse:collapse;font-size:12px}}
-th{{text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:600;text-transform:uppercase;border-bottom:1px solid var(--border)}}
-tbody tr{{border-bottom:1px solid rgba(255,255,255,0.04)}}
-tbody tr:last-child{{border-bottom:none}}
-tbody td{{padding:9px 10px;vertical-align:middle}}
-.disclaimer{{background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:12px;color:#a08040;line-height:1.6}}
-footer{{position:relative;z-index:10;text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:20px}}
-</style>
-</head>
-<body>
-<nav class="nav">
-  <span class="nav-label">Market Intelligence</span>
-  <div class="nav-links">
-    <a href="/" class="inactive">📉 Caídas</a>
-    <a href="/portfolio" class="inactive">🤖 Auto BOT</a>
-    <a href="/historico" class="inactive">📅 Historial</a>
-    <a href="/japan-fares" class="inactive">✈️ Japan Fares</a>
-    <a href="/backtest" class="active">📊 Backtest</a>
-  </div>
-</nav>
-
+.card-label{{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}}
+.chart{{position:relative;overflow-x:auto}} .chart svg{{width:100%;min-width:620px;height:auto;display:block}}
+.grid{{stroke:rgba(255,255,255,0.06)}} .base{{stroke:#6B7A99;stroke-dasharray:4 4}}
+.axis{{fill:var(--muted);font-family:'DM Mono',monospace;font-size:11px}}
+.lbl{{font-family:'Syne',sans-serif;font-size:11px;font-weight:700}} .lblv{{fill:var(--text);font-family:'DM Mono',monospace;font-weight:400}}
+.cross{{stroke:rgba(255,255,255,0.35)}}
+.tip{{position:absolute;top:0;pointer-events:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+  font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap}}
+.tip i{{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}}
+.legend{{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)}}
+.legend i{{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}}
+.tbl{{overflow-x:auto}}
+table{{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}}
+th{{text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--border)}}
+td{{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:'DM Mono',monospace;vertical-align:top}}
+td:first-child{{font-family:'Syne',sans-serif}} td b{{font-weight:700}}
+td.best{{color:#fff;font-weight:500;background:rgba(77,139,255,0.12)}}
+.desc{{font-size:11px;color:var(--muted);margin-top:2px}}
+.sw{{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}}
+.notes{{font-size:13px;color:var(--muted);line-height:1.8}} .notes b{{color:var(--text)}}
+.notes li{{margin-left:18px}}
+@media (max-width:720px){{.wrap{{padding:72px 16px 40px}}}}
+</style></head><body>
+<nav class="nav"><span class="nav-label">Market Intelligence</span><div class="nav-links">
+  <a href="/">📉 Caídas</a><a href="/portfolio">🤖 Auto BOT</a><a href="/historico">📅 Historial</a><a href="/japan-fares">✈️ Japan Fares</a>
+</div></nav>
 <div class="wrap">
-  <div class="eyebrow">📊 Simulación histórica</div>
-  <h1>Backtest <span>Chandelier Exit</span></h1>
-  <div class="subtitle">01 Ene 2025 → {END_DATE.strftime('%d %b %Y')} &nbsp;·&nbsp; Capital inicial $50,000 &nbsp;·&nbsp; NYSE / NASDAQ &nbsp;·&nbsp; {now_str}</div>
-  <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(0,229,153,0.08);border:1px solid rgba(0,229,153,0.25);border-radius:8px;padding:8px 16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:12px;color:#00E599;">
-    📅 Período: <b>26 Jun 2025 → 26 Jun 2026</b> &nbsp;·&nbsp; Capital inicial: $50,000 &nbsp;·&nbsp; Breakout: 55 días
+  <div class="eyebrow">Chandelier Exit ATR · Backtest comparativo</div>
+  <h1>Backtest <span>de ajustes</span></h1>
+  <div class="subtitle">{fecha(days[0])} → {fecha(days[-1])} · {len(days)} días de mercado · {n_bars} acciones del universo ·
+    capital inicial {money(INITIAL_CAP)} · generado {datetime.utcnow().strftime("%d %b %Y %H:%M")} UTC</div>
+
+  <div class="card"><div class="card-label">Capital de cada configuración</div>
+    {chart(results, days, benchmark)}
+    <div class="legend">{"".join(f'<span><i style="background:{c}"></i>{escape(r["name"])}</span>' for r, c in zip(results, COLORS))}
+      <span><i style="background:repeating-linear-gradient(90deg,#6B7A99 0 3px,transparent 3px 6px)"></i>QQQ (comprar y mantener) {pct(bench_ret) if bench_ret is not None else ""}</span></div>
   </div>
 
-  <div class="disclaimer">
-    ⚠️ <b>Solo fines educativos.</b> El backtest usa precios de cierre reales pero no incluye comisiones, slippage, ni impacto de mercado.
-    Los resultados pasados no garantizan resultados futuros.
+  <div class="card"><div class="card-label">Comparación · resaltado = mejor de la columna</div>
+    <div class="tbl"><table><thead><tr>
+      <th>Configuración</th><th>Retorno</th><th>Caída máx.</th><th>Sharpe</th><th>Operaciones</th><th>Acierto</th>
+      <th>Gan. / pérd. prom.</th><th>Factor de beneficio</th><th>Esperado por op.</th><th>1ª mitad · 2ª mitad</th><th>Exposición</th>
+    </tr></thead><tbody>{rows}</tbody></table></div>
+    <div class="notes" style="margin-top:12px">"1ª mitad · 2ª mitad" = retorno antes y después del {half}: un ajuste que solo
+      mejora una mitad probablemente se ajustó al ruido. "Factor de beneficio" = ganancias ÷ pérdidas de operaciones cerradas (&gt; 1 gana dinero).
+      "Exposición" = % promedio de los {MAX_POS} lugares ocupados.</div>
   </div>
 
-  <div class="metrics">
-    <div class="metric">
-      <div class="metric-label">Capital Inicial</div>
-      <div class="metric-val">$50,000</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Capital Final</div>
-      <div class="metric-val" style="color:{ret_color}">${stats['final_equity']:,.0f}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Retorno Total</div>
-      <div class="metric-val" style="color:{ret_color}">{ret_sign}{stats['total_return']:.1f}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Max Drawdown</div>
-      <div class="metric-val" style="color:#FF3B5C">-{stats['max_drawdown']:.1f}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Sharpe Ratio</div>
-      <div class="metric-val" style="color:{'#00E599' if stats['sharpe']>1 else '#FFB800' if stats['sharpe']>0 else '#FF3B5C'}">{stats['sharpe']:.2f}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Operaciones</div>
-      <div class="metric-val">{stats['total_trades']}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Win Rate</div>
-      <div class="metric-val" style="color:{'#00E599' if stats['win_rate']>=50 else '#FF3B5C'}">{stats['win_rate']:.0f}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Avg Ganancia</div>
-      <div class="metric-val" style="color:#00E599">+{stats['avg_win']:.1f}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Avg Pérdida</div>
-      <div class="metric-val" style="color:#FF3B5C">{stats['avg_loss']:.1f}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Mejor Trade</div>
-      <div class="metric-val" style="color:#00E599">+{stats['best_trade']:.1f}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Peor Trade</div>
-      <div class="metric-val" style="color:#FF3B5C">{stats['worst_trade']:.1f}%</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-label">Curva de Equity vs $50,000 base</div>
-    {svg}
-  </div>
-
-  {'<div class="card"><div class="card-label">Posiciones abiertas al cierre del backtest</div><div style="overflow-x:auto"><table><thead><tr><th>Símbolo</th><th>Entrada</th><th>Cierre BT</th><th>Precio Entrada</th><th>Último Precio</th><th>P&L %</th><th>P&L $</th><th>Estado</th></tr></thead><tbody>' + open_rows + '</tbody></table></div></div>' if open_rows else ''}
-
-  <div class="card">
-    <div class="card-label">Log de operaciones cerradas (últimas 30)</div>
-    <div style="overflow-x:auto">
-    <table>
-      <thead>
-        <tr>
-          <th>Símbolo</th><th>Entrada</th><th>Salida</th>
-          <th>Precio Entrada</th><th>Precio Salida</th>
-          <th>P&L %</th><th>P&L $</th><th>Resultado</th>
-        </tr>
-      </thead>
-      <tbody>{trade_rows}</tbody>
-    </table>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-label">Parámetros del backtest</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;font-size:13px;">
-      <div style="color:var(--muted)">Período: <b style="color:var(--text)">01 Ene 2025 → {END_DATE.strftime('%d %b %Y')}</b></div>
-      <div style="color:var(--muted)">Universo: <b style="color:var(--text)">60 tickers NASDAQ/NYSE</b></div>
-      <div style="color:var(--muted)">ATR: <b style="color:var(--text)">período 14, multiplicador 2.5×</b></div>
-      <div style="color:var(--muted)">Breakout: <b style="color:#00E599">máximo 55 días ⚡</b></div>
-      <div style="color:var(--muted)">Filtro tendencia: <b style="color:var(--text)">MA 50 días</b></div>
-      <div style="color:var(--muted)">Volumen: <b style="color:var(--text)">≥ 1.5× promedio 20d</b></div>
-      <div style="color:var(--muted)">Riesgo/operación: <b style="color:var(--text)">2% del portafolio</b></div>
-      <div style="color:var(--muted)">Máx posiciones: <b style="color:var(--text)">8 simultáneas</b></div>
-      <div style="color:var(--muted)">Máx por posición: <b style="color:var(--text)">20% del portafolio</b></div>
-      <div style="color:var(--muted)">Comisiones: <b style="color:#FF3B5C">No incluidas</b></div>
-    </div>
-  </div>
+  <div class="card"><div class="card-label">Cómo se simuló</div>
+    <ul class="notes">
+      <li>Mismos datos diarios de Alpaca (feed IEX, ajustados por splits y dividendos) para todas las configuraciones.</li>
+      <li>Señal al <b>cierre</b>; compra o venta a la <b>apertura del día siguiente</b>. Sin comisiones ni deslizamiento.</li>
+      <li>Stop = cierre más alto <b>desde la compra</b> − k × ATR(14), solo sube. Riesgo 2% por operación, máximo {MAX_POS} posiciones, sin margen.</li>
+      <li>Cada fila agrega un cambio sobre la anterior a partir de "Bot del repo"; "Rutina de Claude" solo cambia el breakout a 20 días.</li>
+      <li>Un backtest de un periodo corto no garantiza resultados futuros. Solo fines educativos.</li>
+    </ul></div>
 </div>
+<script>
+(function(){{
+  var box=document.getElementById('bt'); if(!box) return;
+  var D=JSON.parse(document.getElementById('btdata').textContent), svg=box.querySelector('svg'),
+      tip=document.getElementById('bttip'), vx=document.getElementById('btx');
+  var L=+box.dataset.l, R=+box.dataset.r, W=+box.dataset.w, n=D.days.length;
+  function move(e){{
+    var r=svg.getBoundingClientRect(), cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    var i=Math.max(0,Math.min(n-1,Math.round((cx*W/r.width-L)/(R-L)*(n-1)))), px=L+(R-L)*i/(n-1);
+    vx.setAttribute('x1',px); vx.setAttribute('x2',px); vx.style.display='';
+    var rows=D.series.map(function(s){{return {{n:s.name,c:s.color,v:s.eq[i]}};}}).sort(function(a,b){{return b.v-a.v;}});
+    tip.innerHTML='<div style="color:#8A97B3;margin-bottom:4px">'+D.days[i]+'</div>'+rows.map(function(o){{
+      return '<div><i style="background:'+o.c+'"></i>'+o.n+' · $'+o.v.toLocaleString('en-US')+'</div>';}}).join('')+
+      (D.bench?'<div style="color:#8A97B3">QQQ · $'+D.bench[i].toLocaleString('en-US')+'</div>':'');
+    tip.style.display=''; var left=px*r.width/W+12; if(left>r.width-260) left=px*r.width/W-272; tip.style.left=Math.max(0,left)+'px';
+  }}
+  function hide(){{tip.style.display='none';vx.style.display='none';}}
+  svg.addEventListener('mousemove',move); svg.addEventListener('touchmove',move,{{passive:true}});
+  svg.addEventListener('mouseleave',hide); svg.addEventListener('touchend',hide);
+}})();
+</script>
+</body></html>"""
 
-<footer>Chandelier Exit Backtest · Datos históricos Alpaca IEX · Solo fines educativos · {now_str}</footer>
-</body>
-</html>"""
+
+SHORT = {"repo": "Repo", "rutina": "Rutina 20d", "expo": "+Expo", "pausa": "+Pausa", "filtro": "+Filtro", "stop3": "+Stop 3"}
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+def run(bars):
+    for sym in bars:
+        bars[sym].sort(key=lambda b: b["t"])
+    idx = {s: {b["t"][:10]: i for i, b in enumerate(bs)} for s, bs in bars.items()}
+    days = sorted({b["t"][:10] for s, bs in bars.items() if s != MARKET for b in bs
+                   if START_DATE.isoformat() <= b["t"][:10] <= END_DATE.isoformat()})
+    results = []
+    for p in VARIANTS:
+        curve, trades = simulate(p, bars, idx, days, MARKET)
+        s = stats(curve, trades)
+        log(f"{p['name']:<26} ret {s['ret']:+6.1f}%  dd {s['mdd']:5.1f}%  ops {s['n']:3d}  "
+            f"acierto {s['win_rate']:4.0f}%  PF {s['pf']:.2f}  sharpe {s['sharpe']:.2f}")
+        results.append({**p, "short": SHORT[p["key"]], "curve": curve, "trades": trades, "s": s})
+    bench, bench_ret = [], None
+    if MARKET in bars:
+        mb = {b["t"][:10]: b["c"] for b in bars[MARKET]}
+        first = next((mb[d] for d in days if d in mb), None)
+        if first:
+            last_v = INITIAL_CAP
+            for d in days:
+                last_v = INITIAL_CAP * mb[d] / first if d in mb else last_v
+                bench.append((d, last_v))
+            bench_ret = (bench[-1][1] / INITIAL_CAP - 1) * 100
+    n_bars = len([s for s in bars if s != MARKET])
+    return results, days, bench, bench_ret, n_bars
+
+
 def main():
-    log(f"Chandelier Exit Backtest — {START_DATE} → {END_DATE}")
-
-    all_bars    = fetch_all_bars()
-    daily_index = build_daily_index(all_bars)
-    trading_days = get_trading_days(all_bars)
-
-    log(f"Días de mercado en rango de simulación: {len(trading_days)}")
-
-    equity_curve, trades = run_backtest(all_bars, daily_index, trading_days)
-    stats = calc_stats(equity_curve, trades)
-
-    log(f"Resultado: ${stats['final_equity']:,.0f} ({'+' if stats['total_return']>=0 else ''}{stats['total_return']:.1f}%) "
-        f"| Trades: {stats['total_trades']} | Win rate: {stats['win_rate']:.0f}% | Sharpe: {stats['sharpe']:.2f}")
-
-    html = generate_html(equity_curve, trades, stats)
-    out_dir = os.path.join(os.path.dirname(__file__), "public", "backtest")
-    os.makedirs(out_dir, exist_ok=True)
-    out = os.path.join(out_dir, "index.html")
+    heads = {"APCA-API-KEY-ID": os.environ["ALPACA_API_KEY"],
+             "APCA-API-SECRET-KEY": os.environ["ALPACA_API_SECRET"]}
+    bars = fetch_all_bars(TICKERS + [MARKET], heads)
+    results, days, bench, bench_ret, n_bars = run(bars)
+    html = generate_html(results, days, bench, bench_ret, n_bars)
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public", "backtest", "index.html")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
-    log(f"Reporte generado → {out}")
+    summary = {r["key"]: {k: round(v, 3) if isinstance(v, float) else v for k, v in r["s"].items()} for r in results}
+    summary["_qqq_ret"] = bench_ret
+    print("SUMMARY_JSON " + json.dumps(summary))
+    log(f"Reporte → {out}")
 
 
 if __name__ == "__main__":
