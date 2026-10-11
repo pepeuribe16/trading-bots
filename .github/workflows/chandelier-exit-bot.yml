@@ -7,6 +7,11 @@ on:
     # 3:45pm hora México (CDT = UTC-6) → 21:45 UTC  — antes del cierre
     - cron: "45 21 * * 1-5"
   workflow_dispatch:
+    inputs:
+      solo_pagina:
+        description: "Solo regenerar /portfolio/ (no escanea ni opera)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,7 +34,7 @@ jobs:
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
-        run: python ChandelierBot/chandelier_bot.py
+        run: python ChandelierBot/chandelier_bot.py ${{ inputs.solo_pagina && '--page-only' || '' }}
 
       - name: Commitear stops y página de portafolio al repo
         run: |
