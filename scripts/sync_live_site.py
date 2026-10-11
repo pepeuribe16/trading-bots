@@ -8,6 +8,8 @@ Archivos que se preservan desde el sitio en vivo:
   /index.html                  → dashboard detallado (rutina market-losers-dashboard)
   /historico/index.html        → índice del histórico (misma rutina)
   /historico/YYYY-MM-DD.html   → reportes diarios (misma rutina)
+  /portfolio-btc/*             → dashboard, estado y template del Auto BOT BTC
+                                 (rutina btc + deploy de green-garden-app)
 
 Si un archivo no existe en vivo, Firebase responde con /index.html por la regla
 de rewrite "**"; esos casos se detectan y se deja la copia del repo.
@@ -23,6 +25,11 @@ from site_nav import ensure_nav
 SITE = "https://market-dashboard-gga.web.app"
 PUBLIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
 SYNCED = set()  # páginas traídas del sitio en vivo
+BTC_FILES = [
+    "/portfolio-btc/index.html",
+    "/portfolio-btc/bot-state.json",
+    "/portfolio-btc/template.html",
+]
 
 
 def fetch(path):
@@ -99,6 +106,13 @@ def main():
         # Sin índice en vivo, /historico caería en el rewrite "**" y mostraría la
         # página principal; generamos uno con los reportes que sí hay en public/.
         build_historico_index()
+
+    # bot-state.json guarda la posición, el stop vivo en Alpaca y el historial de
+    # saldo del bot BTC: si un deploy lo borra, el bot pierde su estado.
+    for path in BTC_FILES:
+        data = fetch(path)
+        if is_real(data):
+            save(path, data)
 
     live_missing = fix_nav_everywhere()
     out = os.environ.get("GITHUB_OUTPUT")
