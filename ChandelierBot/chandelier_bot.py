@@ -69,15 +69,29 @@ def get_account():
     r.raise_for_status()
     return r.json()
 
-def market_is_open():
-    """Consulta el reloj de Alpaca; si falla, asume cerrado para no operar a ciegas."""
+TRADE_WINDOW_MIN = 120  # solo opera en las últimas 2 horas antes del cierre
+
+
+def trading_window():
+    """(puede_operar, motivo) según el reloj de Alpaca.
+
+    Opera solo con el mercado abierto y a <= TRADE_WINDOW_MIN minutos del cierre: así la
+    decisión se toma cerca del cierre diario, como en el backtest. Si falla, no opera.
+    """
     try:
         r = requests.get(f"{BASE}/clock", headers=HEADS, timeout=10)
         r.raise_for_status()
-        return bool(r.json().get("is_open"))
+        c = r.json()
     except Exception as e:
-        log(f"No se pudo consultar el reloj del mercado: {e}")
-        return False
+        return False, f"no se pudo consultar el reloj del mercado: {e}"
+    if not c.get("is_open"):
+        return False, "mercado cerrado"
+    now = datetime.fromisoformat(c["timestamp"].replace("Z", "+00:00"))
+    close = datetime.fromisoformat(c["next_close"].replace("Z", "+00:00"))
+    left = (close - now).total_seconds() / 60
+    if left > TRADE_WINDOW_MIN:
+        return False, f"faltan {left:.0f} min para el cierre (opera en los últimos {TRADE_WINDOW_MIN})"
+    return True, f"faltan {left:.0f} min para el cierre"
 
 def get_positions():
     r = requests.get(f"{BASE}/positions", headers=HEADS, timeout=10)
@@ -433,10 +447,14 @@ if __name__ == "__main__":
     log("Chandelier Exit Bot — " + ("page only" if page_only else "single run"))
     log(f"ATR({ATR_PERIOD}) × {ATR_MULT} | Risk {RISK_PCT*100:.0f}%/trade | "
         f"Max {MAX_POS} positions | {BKOUT_DAYS}d breakout + MA{MA_DAYS} filter")
-    if not page_only and not market_is_open():
-        # Fuera de horario las órdenes quedarían en cola hasta la apertura con precios viejos.
-        log("Mercado cerrado — no se opera; solo se actualiza la página.")
-        page_only = True
+    if not page_only:
+        ok, why = trading_window()
+        log(f"Ventana de operación: {why}")
+        if not ok:
+            # Fuera de la ventana no se opera: las órdenes quedarían en cola o se decidirían
+            # con precios intradía. Solo se actualiza la página.
+            log("No se opera en esta ejecución; solo se actualiza la página.")
+            page_only = True
     if not page_only:
         run_scan()
     # Generate portfolio page after scan
