@@ -1,11 +1,12 @@
 name: chandelier-exit-bot
 
 on:
+  # El disparo principal es la rutina de Claude "Chandelier Bot · disparo diario" (19:45 UTC,
+  # 3:45pm ET), porque GitHub retrasa los horarios programados varias horas. Estos crons son
+  # respaldo: si corren con el mercado cerrado, el bot solo actualiza la página.
   schedule:
-    # 9:35am hora México (CDT = UTC-6) → 15:35 UTC  — apertura
-    - cron: "35 15 * * 1-5"
-    # 3:45pm hora México (CDT = UTC-6) → 21:45 UTC  — antes del cierre
-    - cron: "45 21 * * 1-5"
+    - cron: "45 17 * * 1-5"
+    - cron: "45 19 * * 1-5"
   workflow_dispatch:
     inputs:
       solo_pagina:
@@ -15,6 +16,11 @@ on:
 
 permissions:
   contents: write
+
+# Mismo grupo que los demás workflows que publican en Firebase.
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
 
 jobs:
   run:
@@ -43,3 +49,19 @@ jobs:
           git add -f ChandelierBot/chandelier_stops.json public/portfolio/index.html
           git diff --cached --quiet || git commit -m "chore: update chandelier stops + portfolio page [skip ci]"
           git push
+
+      - name: Preservar páginas publicadas por rutinas de Claude
+        id: sync
+        continue-on-error: true
+        run: python scripts/sync_live_site.py
+
+      - name: Publicar en Firebase Hosting
+        if: steps.sync.outcome == 'success'
+        continue-on-error: true
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          npm install -g firebase-tools --silent
+          # Ver japan-fare-monitor.yml: limpia BOM y saltos de línea del secreto.
+          CLEAN_TOKEN=$(printf '%s' "$FIREBASE_TOKEN" | sed '1s/^\xef\xbb\xbf//' | tr -d '\r\n')
+          firebase deploy --only hosting --token "$CLEAN_TOKEN" --non-interactive

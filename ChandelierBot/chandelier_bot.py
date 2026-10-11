@@ -69,6 +69,16 @@ def get_account():
     r.raise_for_status()
     return r.json()
 
+def market_is_open():
+    """Consulta el reloj de Alpaca; si falla, asume cerrado para no operar a ciegas."""
+    try:
+        r = requests.get(f"{BASE}/clock", headers=HEADS, timeout=10)
+        r.raise_for_status()
+        return bool(r.json().get("is_open"))
+    except Exception as e:
+        log(f"No se pudo consultar el reloj del mercado: {e}")
+        return False
+
 def get_positions():
     r = requests.get(f"{BASE}/positions", headers=HEADS, timeout=10)
     r.raise_for_status()
@@ -423,6 +433,10 @@ if __name__ == "__main__":
     log("Chandelier Exit Bot — " + ("page only" if page_only else "single run"))
     log(f"ATR({ATR_PERIOD}) × {ATR_MULT} | Risk {RISK_PCT*100:.0f}%/trade | "
         f"Max {MAX_POS} positions | {BKOUT_DAYS}d breakout + MA{MA_DAYS} filter")
+    if not page_only and not market_is_open():
+        # Fuera de horario las órdenes quedarían en cola hasta la apertura con precios viejos.
+        log("Mercado cerrado — no se opera; solo se actualiza la página.")
+        page_only = True
     if not page_only:
         run_scan()
     # Generate portfolio page after scan
