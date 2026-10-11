@@ -35,21 +35,21 @@ MARKET = "QQQ"
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ChandelierBot", "config.json")) as f:
     TICKERS = json.load(f)["universe"]
 
-# Cada variante agrega UN cambio sobre la anterior (desde "Bot del repo"), para ver
-# cuánto aporta cada ajuste. "Rutina 20d" replica la regla de la rutina de Claude.
+# Ronda 2: combinaciones sobre el breakout de 20 días (el mejor de la ronda 1), contra las
+# dos configuraciones que operaban hasta ahora.
 VARIANTS = [
-    {"key": "repo", "name": "Bot del repo (actual)", "desc": "Breakout 55d · stop 2.5 ATR · 20% por posición",
+    {"key": "repo", "name": "Bot del repo (anterior)", "desc": "Breakout 55d · stop 2.5 ATR · 20% por posición",
      "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.20, "cooldown": 0, "regime": None},
-    {"key": "rutina", "name": "Rutina de Claude (20d)", "desc": "Igual, con breakout de 20 días",
+    {"key": "rutina", "name": "Rutina de Claude (anterior)", "desc": "Breakout 20d · stop 2.5 ATR · 20% por posición",
      "bkout": 20, "atr_mult": 2.5, "max_pos_pct": 0.20, "cooldown": 0, "regime": None},
-    {"key": "expo", "name": "+ Exposición ≤ 100%", "desc": "Bot del repo con 12.5% máximo por posición",
-     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 0, "regime": None},
-    {"key": "pausa", "name": "+ Pausa de 10 días", "desc": "No recompra un símbolo en 10 días tras venderlo",
-     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 10, "regime": None},
-    {"key": "filtro", "name": "+ Filtro QQQ > MA200", "desc": "Solo compra si QQQ cierra sobre su media de 200 días",
-     "bkout": 55, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 10, "regime": 200},
-    {"key": "stop3", "name": "+ Stop 3.0 ATR", "desc": "Stop más amplio (el riesgo sigue en 2%)",
-     "bkout": 55, "atr_mult": 3.0, "max_pos_pct": 0.125, "cooldown": 10, "regime": 200},
+    {"key": "a", "name": "20d · 12.5% · stop 2.5", "desc": "Rutina sin margen (12.5% por posición)",
+     "bkout": 20, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 0, "regime": None},
+    {"key": "b", "name": "20d · 12.5% · stop 2.5 · QQQ", "desc": "+ solo compra si QQQ > MA200",
+     "bkout": 20, "atr_mult": 2.5, "max_pos_pct": 0.125, "cooldown": 0, "regime": 200},
+    {"key": "c", "name": "20d · 12.5% · stop 3.0", "desc": "Sin margen, stop más amplio",
+     "bkout": 20, "atr_mult": 3.0, "max_pos_pct": 0.125, "cooldown": 0, "regime": None},
+    {"key": "d", "name": "20d · 12.5% · stop 3.0 · QQQ", "desc": "Stop 3.0 + filtro QQQ > MA200",
+     "bkout": 20, "atr_mult": 3.0, "max_pos_pct": 0.125, "cooldown": 0, "regime": 200},
 ]
 COLORS = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"]  # validados sobre #111520
 
@@ -391,7 +391,7 @@ td.best{{color:#fff;font-weight:500;background:rgba(77,139,255,0.12)}}
       <li>Mismos datos diarios de Alpaca (feed IEX, ajustados por splits y dividendos) para todas las configuraciones.</li>
       <li>Señal al <b>cierre</b>; compra o venta a la <b>apertura del día siguiente</b>. Sin comisiones ni deslizamiento.</li>
       <li>Stop = cierre más alto <b>desde la compra</b> − k × ATR(14), solo sube. Riesgo 2% por operación, máximo {MAX_POS} posiciones, sin margen.</li>
-      <li>Cada fila agrega un cambio sobre la anterior a partir de "Bot del repo"; "Rutina de Claude" solo cambia el breakout a 20 días.</li>
+      <li>Las dos primeras filas son las configuraciones que operaban; las demás combinan breakout de 20 días, 12.5% por posición (sin margen), stop 2.5 o 3.0 ATR y filtro QQQ &gt; MA200.</li>
       <li>Un backtest de un periodo corto no garantiza resultados futuros. Solo fines educativos.</li>
     </ul></div>
 </div>
@@ -419,7 +419,7 @@ td.best{{color:#fff;font-weight:500;background:rgba(77,139,255,0.12)}}
 </body></html>"""
 
 
-SHORT = {"repo": "Repo", "rutina": "Rutina 20d", "expo": "+Expo", "pausa": "+Pausa", "filtro": "+Filtro", "stop3": "+Stop 3"}
+SHORT = {"repo": "Repo 55d", "rutina": "Rutina 20d", "a": "20d·2.5", "b": "20d·2.5·QQQ", "c": "20d·3.0", "d": "20d·3.0·QQQ"}
 
 
 def run(bars):
