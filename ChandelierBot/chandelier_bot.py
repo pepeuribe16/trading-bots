@@ -93,20 +93,34 @@ def place_sell(symbol, qty):
 
 # ── Market data ───────────────────────────────────────────────────────────────
 def get_bars_batch(symbols, limit=None, start=None):
+    """Últimas `limit` barras diarias de cada símbolo.
+
+    Alpaca necesita `start` (sin él devuelve solo la barra de hoy) y su `limit` cuenta las
+    barras de TODOS los símbolos de la petición, así que se pagina y se recorta por símbolo.
+    """
     limit = limit or BARS_NEEDED
+    if not start:
+        # ~1.6 días naturales por día hábil, más margen por feriados.
+        start = (datetime.utcnow() - timedelta(days=int(limit * 1.6) + 10)).strftime("%Y-%m-%d")
     results = {}
     for i in range(0, len(symbols), 15):
         batch = symbols[i:i+15]
-        params = {"symbols": ",".join(batch), "timeframe": "1Day",
-                  "limit": limit, "feed": "iex"}
-        if start:
-            params["start"] = start
-        r = requests.get(f"{DATA}/stocks/bars", headers=HEADS,
-                         params=params, timeout=20)
-        if r.ok:
-            for sym, bars in r.json().get("bars", {}).items():
-                results[sym] = bars
-    return results
+        params = {"symbols": ",".join(batch), "timeframe": "1Day", "start": start,
+                  "limit": 10000, "feed": "iex"}
+        while True:
+            r = requests.get(f"{DATA}/stocks/bars", headers=HEADS,
+                             params=params, timeout=20)
+            if not r.ok:
+                log(f"  bars request failed ({r.status_code}): {r.text[:80]}")
+                break
+            body = r.json()
+            for sym, bars in (body.get("bars") or {}).items():
+                results.setdefault(sym, []).extend(bars)
+            token = body.get("next_page_token")
+            if not token:
+                break
+            params["page_token"] = token
+    return {sym: bars[-limit:] for sym, bars in results.items()}
 
 
 # ── Indicators ────────────────────────────────────────────────────────────────
@@ -270,7 +284,11 @@ def run_scan():
             qty = calc_qty(portfolio, price, stop)
             cost = qty * price
             if cost > cash:
-                qty = max(1, int(cash / price))
+                # Ajusta al efectivo disponible; si no alcanza ni para 1 acción, no compra.
+                qty = int(cash / price)
+                if qty < 1:
+                    log(f"  {sym}: sin efectivo suficiente (${cash:,.0f}) — se omite")
+                    continue
                 cost = qty * price
             risk = qty * (price - stop)
             log(f"  ★ {sym:<6} ${price:.2f} | ATR {atr:.2f} | "
@@ -326,10 +344,7 @@ def get_fills():
 def generate_portfolio_html(account, positions, stops):
     created = account.get("created_at", "")[:10] or datetime.utcnow().strftime("%Y-%m-%d")
 
-    # Con `start` Alpaca devuelve varios días (sin él solo trae la barra de hoy y el ATR sale
-    # vacío). El límite es amplio porque cuenta desde `start`: calc_atr usa las últimas 14.
-    since = (datetime.utcnow() - timedelta(days=40)).strftime("%Y-%m-%d")
-    bars_map = get_bars_batch(list(positions.keys()), limit=100, start=since) if positions else {}
+    bars_map = get_bars_batch(list(positions.keys()), limit=ATR_PERIOD + 5) if positions else {}
     pos = []
     for sym, p in positions.items():
         pos.append({"symbol": sym, "qty": int(float(p["qty"])),
