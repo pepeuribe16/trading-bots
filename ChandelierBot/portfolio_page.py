@@ -481,16 +481,23 @@ def closed_trades_from_fills(fills):
             continue  # venta sin compra registrada (fuera del historial)
         entry = cost / matched
         pnl = (price - entry) * matched
-        # Varias ventas parciales de la misma posición el mismo día cuentan como una.
-        prev = trades[-1] if trades else None
-        if prev and prev["symbol"] == sym and prev["closed"][:10] == when[:10] and prev["opened"] == opened:
-            total = prev["qty"] + matched
-            prev["exit"] = (prev["exit"] * prev["qty"] + price * matched) / total
-            prev["entry"] = (prev["entry"] * prev["qty"] + entry * matched) / total
-            prev["qty"], prev["pnl"] = total, prev["pnl"] + pnl
-            prev["pnl_pct"] = (prev["exit"] - prev["entry"]) / prev["entry"] * 100
-            continue
         trades.append({"symbol": sym, "qty": round(matched), "entry": entry, "exit": price,
                        "pnl": pnl, "pnl_pct": (price - entry) / entry * 100,
                        "opened": opened, "closed": when})
-    return trades
+
+    # Las ventas del mismo símbolo el mismo día (fills parciales, o una posición comprada en
+    # varias partes) son una sola operación.
+    merged = {}
+    for t in trades:
+        key = (t["symbol"], t["closed"][:10])
+        m = merged.get(key)
+        if not m:
+            merged[key] = dict(t)
+            continue
+        total = m["qty"] + t["qty"]
+        m["entry"] = (m["entry"] * m["qty"] + t["entry"] * t["qty"]) / total
+        m["exit"] = (m["exit"] * m["qty"] + t["exit"] * t["qty"]) / total
+        m["qty"], m["pnl"] = total, m["pnl"] + t["pnl"]
+        m["pnl_pct"] = (m["exit"] - m["entry"]) / m["entry"] * 100
+        m["opened"] = min(m["opened"], t["opened"])
+    return list(merged.values())

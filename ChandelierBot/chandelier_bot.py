@@ -294,7 +294,9 @@ def _print_summary(sells, buys):
 def get_portfolio_history(since):
     """Saldo diario de la cuenta desde `since` (YYYY-MM-DD)."""
     r = requests.get(f"{BASE}/account/portfolio/history", headers=HEADS, timeout=20,
-                     params={"timeframe": "1D", "start": f"{since}T00:00:00Z"})
+                     # Con solo `start`, Alpaca devuelve un mes; `end` pide hasta hoy.
+                     params={"timeframe": "1D", "start": f"{since}T00:00:00Z",
+                             "end": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")})
     r.raise_for_status()
     h = r.json()
     out = []
