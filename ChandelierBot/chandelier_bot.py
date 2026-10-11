@@ -37,6 +37,10 @@ VOL_MULT     = S["volume_multiplier"]
 RISK_PCT     = S["risk_per_trade_pct"] / 100
 MAX_POS_PCT  = S["max_position_pct"] / 100
 MAX_POS      = S["max_positions"]
+# Filtro de mercado: solo abre posiciones si MARKET_SYM cierra sobre su media de MARKET_MA días
+# (0 lo desactiva). No afecta las ventas.
+MARKET_SYM   = S.get("market_filter_symbol", "QQQ")
+MARKET_MA    = S.get("market_filter_ma", 0)
 
 STOPS_FILE   = os.path.join(_HERE, "chandelier_stops.json")
 BARS_NEEDED  = max(MA_DAYS, BKOUT_DAYS) + ATR_PERIOD + 5  # ~70 bars
@@ -180,6 +184,22 @@ def entry_signal(bars):
     return close, stop, atr, volume / avgvol
 
 
+def market_ok():
+    """True si el filtro de mercado permite comprar (o está desactivado)."""
+    if not MARKET_MA:
+        return True
+    bars = get_bars_batch([MARKET_SYM], limit=MARKET_MA + 5).get(MARKET_SYM, [])
+    if len(bars) < MARKET_MA:
+        log(f"  Filtro de mercado: solo {len(bars)} barras de {MARKET_SYM}; se omite el filtro")
+        return True
+    close = bars[-1]["c"]
+    ma = sum(b["c"] for b in bars[-MARKET_MA:]) / MARKET_MA
+    ok = close > ma
+    log(f"  Filtro de mercado: {MARKET_SYM} ${close:.2f} vs MA{MARKET_MA} ${ma:.2f} → "
+        + ("compras permitidas" if ok else "sin compras nuevas"))
+    return ok
+
+
 # ── Position sizing ───────────────────────────────────────────────────────────
 def calc_qty(portfolio_value, entry_price, stop_price):
     """Risk 2% of portfolio. Never exceed 20% of portfolio in one position."""
@@ -256,6 +276,10 @@ def run_scan():
 
     if cash < 500:
         log(f"\nInsufficient cash (${cash:,.0f}). Skipping scan.")
+        _print_summary(sells_done, buys_done)
+        return
+
+    if not market_ok():
         _print_summary(sells_done, buys_done)
         return
 
@@ -376,6 +400,8 @@ def generate_portfolio_html(account, positions, stops):
         "account_id": cfg["alpaca"].get("account", ""),
         "positions": pos, "history": history, "trades": trades, "first_trade": first_trade,
         "initial": 50000.0, "max_positions": MAX_POS,
+        "strategy": {"bkout": BKOUT_DAYS, "atr_mult": ATR_MULT, "max_pos_pct": MAX_POS_PCT * 100,
+                     "market_sym": MARKET_SYM, "market_ma": MARKET_MA},
         "updated_at": datetime.now().strftime("%d %b %Y · %H:%M CT"),
     })
 
