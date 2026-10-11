@@ -342,10 +342,12 @@ def generate_portfolio_html(account, positions, stops):
         log(f"Portfolio history unavailable: {e}")
         history = []
     try:
-        trades = closed_trades_from_fills(get_fills())
+        fills = get_fills()
     except Exception as e:
         log(f"Fills unavailable: {e}")
-        trades = []
+        fills = []
+    trades = closed_trades_from_fills(fills)
+    first_trade = fills[0]["transaction_time"] if fills else None
 
     # El último punto del historial es el cierre anterior; agrega el saldo de este momento.
     today = datetime.utcnow().strftime("%Y-%m-%d")
@@ -355,7 +357,7 @@ def generate_portfolio_html(account, positions, stops):
         "account": {"equity": float(account["equity"]), "cash": float(account["cash"]),
                     "created_at": account.get("created_at")},
         "account_id": cfg["alpaca"].get("account", ""),
-        "positions": pos, "history": history, "trades": trades,
+        "positions": pos, "history": history, "trades": trades, "first_trade": first_trade,
         "initial": 50000.0, "max_positions": MAX_POS,
         "updated_at": datetime.now().strftime("%d %b %Y · %H:%M CT"),
     })

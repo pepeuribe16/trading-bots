@@ -9,6 +9,7 @@ Entrada (dict):
   history   : [("YYYY-MM-DD", equity), ...]               — de /v2/account/portfolio/history
   trades    : [{"symbol","qty","entry","exit","pnl","pnl_pct","opened","closed"}]
               operaciones cerradas (compra → venta), calculadas FIFO desde los fills
+  first_trade: fecha ISO de la primera compra (opcional)
   initial   : capital inicial
   max_positions, updated_at
 """
@@ -83,9 +84,9 @@ def _equity_chart(history, trades, initial):
                  f'<text x="{L - 8}" y="{y(t) + 4:.1f}" class="axis" text-anchor="end">'
                  f'${t / 1000:,.0f}k</text>')
     base_y = y(initial)
-    grid += (f'<line x1="{L}" x2="{W - R}" y1="{base_y:.1f}" y2="{base_y:.1f}" class="base"/>'
-             f'<text x="{W - R}" y="{base_y - 6:.1f}" class="axis" text-anchor="end">'
-             f'capital inicial {_money(initial)}</text>')
+    # Sin etiqueta dentro de la gráfica (se encimaría con la línea); la leyenda la nombra.
+    grid += f'<line x1="{L}" x2="{W - R}" y1="{base_y:.1f}" y2="{base_y:.1f}" class="base"/>'
+
 
     xlabels = ""
     k = min(5, n)
@@ -135,7 +136,7 @@ def _equity_chart(history, trades, initial):
 <div class="legend"><span><i class="ln"></i>Saldo de la cuenta</span>
   <span><b style="color:{GREEN}">▲</b> venta con ganancia</span>
   <span><b style="color:{RED}">▼</b> venta con pérdida</span>
-  <span><i class="dash"></i>capital inicial</span></div>"""
+  <span><i class="dash"></i>capital inicial ({_money(initial)})</span></div>"""
 
 
 def _stop_bar(p):
@@ -206,9 +207,12 @@ def render_portfolio_page(d):
     pl, pl_pct = equity - initial, (equity - initial) / initial * 100
     plc = GREEN if pl >= 0 else RED
 
-    start = acc.get("created_at") or (history[0][0] if history else None)
-    if history and start and history[0][0] < start[:10]:
-        start = history[0][0]
+    # "Operando desde" = primera compra del bot; si no hay, la apertura de la cuenta.
+    start = d.get("first_trade") or acc.get("created_at") or (history[0][0] if history else None)
+    if start:
+        # La línea arranca el día hábil anterior a la primera operación.
+        prev = [h for h in history if h[0] < start[:10]]
+        history = prev[-1:] + [h for h in history if h[0] >= start[:10]]
     dias = (date.today() - date.fromisoformat(start[:10])).days if start else 0
     desde = f"Operando desde el {_fecha(start)} · {dias} días" if start else ""
 
